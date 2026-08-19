@@ -1,0 +1,20 @@
+# 內部資料，不進版控、不上公開站台
+case/
+.backup/
+.claude/
+
+# 舊版本與自動備份
+vibe-coding-guide.html
+vibe-coding-guide-v2.html
+*.backup-*.html
+
+# 內部文件
+給非工程同仁的-CLAUDE.md
+
+# 講者備註：已從簡報 HTML 抽出，只留在本機，不進公開 repo
+講者備註-*.md
+
+# 作業系統雜項
+Thumbs.db
+desktop.ini
+.DS_Store

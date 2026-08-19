@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帶 AI 做事（進階）：把工具養起來</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 非阻擋載入：字型只是加分項，不值得拿開場的十秒去賭。
+     企業防火牆靜默丟包、訪客 Wi-Fi 要認證、或筆電根本沒連網時，
+     用 rel=stylesheet 會擋住首次繪製 —— 投影機亮起來是一片白。 -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<noscript><link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap"></noscript>
+<style>
+/* ═══════════════════════════════════════════════════════
+   沿用 v3 的版面骨架：執行期不做任何版面測量。
+   字級由 CSS 綁螢幕寬高，各頁密度差異用寫死的 --z（縮放）處理，
+   JS 只切 class。切頁／展開／切頁籤都不觸發 JS 重排。
+   v4 新增的元件（點陣圖、決策表、步驟分類）一律用 grid 固定欄數，
+   不用 JS 算寬度 —— 投影機解析度不一，量出來的值不可信。
+   ═══════════════════════════════════════════════════════ */
+
+html { font-size: clamp(16px, min(1.02vw, 2.05vh) + 5.5px, 30px); }
+
+:root {
+  --paper:      #f2efe7;
+  --surface:    #ffffff;
+  --fill:       #e9e4d8;
+  --ink:        #1a1a1a;
+  --ink2:       #5f594f;
+  --line:       #ccc0a4;
+  --edge:       #9a8d78;
+  --brand:      #d2501f;
+  --brand-ink:  #a83e17;
+  --brand-deep: #b8441a;
+  --brand-tint: #fbe8dd;
+  --accent:     #e0c9a8;
+  --ok:         #2c6e4b;
+  --ok-tint:    #e3efe6;
+  --stop:       #a83a2c;
+  --stop-tint:  #f8e3de;
+  /* v4 新增：四類步驟分類要四個可分辨的顏色，而且投影上不能互相混。
+     黃色系在投影上最容易糊掉，所以用深琥珀而不是亮黃。 */
+  --warn:       #8a6212;
+  --warn-tint:  #f6edd6;
+  --r:          14px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.8;
+  font-size: 1rem;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 投影片 ── */
+.slide { display: none; height: 100vh; padding: 0 0 52px; overflow-y: auto; }
+.slide.on { display: block; animation: in .16s ease-out; }
+@keyframes in { from { opacity: 0 } to { opacity: 1 } }
+
+.inner {
+  zoom: var(--z, 1);
+  max-width:  calc(1460px / var(--z, 1));
+  min-height: calc((100vh - 52px) / var(--z, 1));
+  margin: 0 auto;
+  padding: 1.6rem 2.2rem 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* 各頁密度：開發階段寫死，執行期零成本。
+   斷點 1010px 是 v3 量出來的：1080p 筆電「忘記按 F11」時，
+   Chrome 工具列＋工作列會把視窗高吃到 940–993。 */
+.slide[data-dense="high"] { --z: .90 }
+.slide[data-dense="mid"]  { --z: .98 }
+@media (max-height: 1010px) {
+  .slide                    { --z: .94 }
+  .slide[data-dense="high"] { --z: .76 }
+  .slide[data-dense="mid"]  { --z: .84 }
+}
+
+/* ── 文字 ── */
+.eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .18em;
+           color: var(--brand-ink); margin-bottom: .55rem }
+h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: -.035em; line-height: 1.22 }
+h2 { font-size: 1.95rem; font-weight: 900; letter-spacing: -.03em; line-height: 1.28 }
+h1 em, h2 em { color: var(--brand); font-style: normal }
+.hint { font-size: .88rem; color: var(--ink2); margin: .5rem 0 .1rem }
+h3 { font-size: 1rem; font-weight: 700; color: var(--ink2); letter-spacing: .02em; margin-bottom: .5rem }
+/* <code> 的統一長相：等寬字、比所在本文小一階、品牌色、粗體。
+   不訂這條的話 <code> 只會繼承父層字級，同一個 /plan 在 hint、表頭、列點裡
+   會變成三種大小三種顏色；而且 font-family 會掉到瀏覽器預設的 monospace
+   （Courier 系），在投影上跟本文的字型明顯對不起來。 */
+code { font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace;
+       font-size: .95em; color: var(--brand-ink); font-weight: 700 }
+
+.stack > * + * { margin-top: 1.1rem; }
+
+/* ── 金句 ── */
+.punch { background: var(--brand-deep); color: #fff; border-radius: var(--r);
+         padding: .95rem 1.3rem; font-size: 1.2rem; font-weight: 700; line-height: 1.5 }
+.punch b { font-weight: 900 }
+
+/* ── 方塊 ── */
+.grid { display: grid; gap: .9rem; counter-reset: box }
+.g2 { grid-template-columns: repeat(2, 1fr) }
+.g3 { grid-template-columns: repeat(3, 1fr) }
+
+.box { counter-increment: box; background: var(--surface); border: 1.5px solid var(--line);
+       border-radius: var(--r); padding: .95rem 1.1rem }
+.box::before { content: counter(box, decimal-leading-zero); display: block; font-size: .72rem;
+               font-weight: 900; letter-spacing: .1em; color: var(--brand-ink); margin-bottom: .3rem }
+/* 不編號的卡：用在「不是流程、只是並列」的地方，硬編號會讓人以為有先後順序 */
+.grid.plain .box::before { content: none }
+.box .t { font-weight: 700; font-size: 1.02rem; display: block; line-height: 1.4 }
+.box .s { color: var(--ink2); font-size: .92rem; display: block; line-height: 1.5; margin-top: .15rem }
+/* 三層對照卡：標題一行、對照一行、說明再一段。
+   原本把對照用全形空格接在標題後面，三等分卡片放不下會亂折行。 */
+.box .tsub { display: block; font-size: .92rem; font-weight: 400; color: var(--ink2); margin-top: .2rem }
+.box .tsub + .s { margin-top: .9rem }
+
+/* 語意塊：左色條，不用整框，視覺比較安靜 */
+.panel { border-radius: var(--r); padding: 1rem 1.2rem; border-left: 5px solid var(--edge); background: var(--fill) }
+.panel .ph { font-weight: 900; font-size: 1.05rem; margin-bottom: .5rem }
+.panel ul { list-style: none; font-size: .96rem; line-height: 1.7 }
+.panel li { position: relative; padding-left: 1.25rem; margin-bottom: .3rem }
+.panel li::before { position: absolute; left: 0; font-weight: 700 }
+.panel.ok   { background: var(--ok-tint);   border-left-color: var(--ok) }
+.panel.ok   .ph { color: var(--ok) }
+.panel.ok   li::before { content: '✓'; color: var(--ok) }
+.panel.stop { background: var(--stop-tint); border-left-color: var(--stop) }
+.panel.stop .ph { color: var(--stop) }
+.panel.stop li::before { content: '×'; color: var(--stop) }
+.panel.warn { background: var(--warn-tint); border-left-color: var(--warn) }
+.panel.warn .ph { color: var(--warn) }
+.panel.warn li::before { content: '!'; color: var(--warn) }
+.panel.mark { background: var(--brand-tint); border-left-color: var(--brand) }
+.panel.mark .ph { color: var(--brand-ink) }
+.panel.mark li { padding-left: 0 }
+.panel.mark li::before { content: none }
+/* 兩欄：四條各佔一行時整塊會太高，但併成 flex-wrap 又會失去「四條並列」的可掃描性。
+   分欄同時保住兩者。break-inside 不可省 —— 少了它，某一條會從中間斷開跨到下一欄。 */
+.panel .sub { font-size: .86em; opacity: .8 }
+
+.note-inline { background: var(--brand-tint); border-radius: var(--r); padding: .8rem 1.1rem;
+               font-size: .92rem; line-height: 1.6 }
+.note-inline b { color: var(--brand-ink) }
+
+/* ── P1 點陣圖 ──
+   整張圖就是這一頁的內容，所以它要吃掉大部分高度，底下只留四色對照。
+   70vh 是回推的：1080p 全螢幕時 .inner 可用高約 1028px，扣掉標題 106px、
+   四色說明約 60px、間距與內距約 100px，剩給圖的就是 760px ≒ 70vh。
+   矮螢幕由 --z 再整體收一階，不用另外為這頁調。
+   圖不放大到超過原尺寸（width/height:auto + max-*），否則點會糊掉。 */
+.hero { display: flex; justify-content: center }
+.hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 70vh; border-radius: 10px }
+/* 四色對照：色塊要夠大才在投影上分得出黃和紅，用方塊不用圓點 —— 跟圖裡的方塊一致 */
+.dotkey { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem 1.1rem }
+.dotkey div { display: flex; align-items: flex-start; gap: .5rem; font-size: .9rem; line-height: 1.45; color: var(--ink2) }
+.dotkey i { flex: none; width: 1rem; height: 1rem; border-radius: 3px; margin-top: .2rem; border: 1px solid rgb(0 0 0 / .12) }
+.dotkey b { display: block; font-weight: 900; font-size: 1rem; color: var(--ink) }
+
+/* ── 決策表 ──
+   三欄：你想要什麼 → 用哪一個 → 不這樣選會怎樣。
+   第三欄是重點，所以不能省成兩欄 —— 只有前兩欄的話，人記得住對照，記不住理由。 */
+.dt { width: 100%; border-collapse: collapse; font-size: .95rem; background: var(--surface);
+      border: 1.5px solid var(--line); border-radius: var(--r); overflow: hidden }
+.dt th { background: var(--fill); text-align: left; padding: .55rem .9rem; font-size: .82rem;
+         font-weight: 900; letter-spacing: .08em; color: var(--ink2) }
+.dt td { padding: .62rem .9rem; border-top: 1px solid var(--line); vertical-align: top; line-height: 1.5 }
+.dt td.k { font-weight: 900; color: var(--brand-ink); white-space: nowrap;
+           font-family: ui-monospace, Consolas, monospace; font-size: 1rem }
+.dt td.w { color: var(--ink2) }
+/* 「這工具要給誰用」那張表的第一欄是中文句子不是指令，不能套 td.k ——
+   td.k 的 white-space:nowrap 會讓「我和同事，各自處理各自的資料」撐爆整張表的寬度。 */
+.dt td.who { font-weight: 900; color: var(--brand-ink); line-height: 1.45 }
+.dt .sub { font-size: .86em; opacity: .8 }
+/* P10 那張三格表是要一列一列指著唸的，行距太緊台下會對錯列。
+   只加在 .roomy —— 另外兩張表（P7 工具對照／P8 該給誰用）是「掃過去看對照」，
+   一起加寬只會讓那兩頁高到要捲。 */
+.dt.roomy th { padding: .72rem .9rem }
+.dt.roomy td { padding: 1.02rem .9rem }
+
+/* ── 步驟分類（P10）──
+   每一列是一組步驟，左邊一個色塊標它屬於哪一類。
+   分類色直接套在左邊界，不上整列底色 —— 整列上色四種顏色排下來會像色卡，讀不下去。 */
+.slist { display: flex; flex-direction: column; gap: .45rem }
+.srow { display: grid; grid-template-columns: 5.6rem 1fr; gap: .8rem; align-items: start;
+        background: var(--surface); border: 1.5px solid var(--line); border-left: 6px solid var(--edge);
+        border-radius: 10px; padding: .55rem .9rem }
+.srow .tag { font-size: .78rem; font-weight: 900; letter-spacing: .04em; line-height: 1.9 }
+.srow .bd { font-size: .95rem; line-height: 1.55 }
+.srow .bd .no { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--ink2); font-size: .9em }
+.srow.a { border-left-color: var(--ok) }    .srow.a .tag { color: var(--ok) }
+.srow.b { border-left-color: var(--warn) }  .srow.b .tag { color: var(--warn) }
+.srow.c { border-left-color: var(--stop) }  .srow.c .tag { color: var(--stop) }
+.srow.d { border-left-color: var(--brand) } .srow.d .tag { color: var(--brand-ink) }
+
+/* ── 流程圖（P5 餐廳／P6 電商／P9 存檔時間軸）──
+   用 SVG 而不是並排方塊：這三張圖要講的都是「東西怎麼來回跑」，
+   方塊排一列只看得出有幾個角色，看不出誰傳給誰、傳完有沒有回來。
+   viewBox 固定、width:100%，跟著 zoom 一起縮，執行期不量測。
+   marker 的 id 每張圖各自獨立（ar7 / ar8 / arT）：
+   marker 是全域 id，但定義它的 <svg> 在非當前頁時整段 display:none，
+   跨頁共用會在某些瀏覽器上變成「箭頭消失」而且不報錯。 */
+.flow { display: block; width: 100%; height: auto }
+.flow text { font-family: inherit }
+.flow .nd   { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.flow .nd-k { fill: var(--brand-tint); stroke: var(--brand-deep); stroke-width: 2.5 }
+/* emoji 要另外指定字體：Noto Sans TC 沒有彩色 emoji，
+   不指定的話在部分機器上會掉成黑白線框字，投影出來像亂碼 */
+.flow .t-e  { font-size: 30px; font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif }
+.flow .t-t  { font-size: 19px; font-weight: 900; fill: var(--ink) }
+.flow .t-d  { font-size: 13px; fill: var(--ink2) }
+.flow .t-a  { font-size: 13.5px; font-weight: 700; fill: var(--ink2) }
+.flow .t-ak { fill: var(--brand-ink) }
+.flow .t-ag { fill: var(--ok) }
+.flow .ln   { stroke: var(--edge); stroke-width: 2; fill: none }
+/* 去程橘、回程綠：同色的話兩排箭頭在投影上會糊成一團，看不出哪排是回來的 */
+.flow .go   { stroke: var(--brand); stroke-width: 2.5; fill: none }
+.flow .back { stroke: var(--ok); stroke-width: 2.5; fill: none }
+
+/* 角色圖（餐廳／購物 App）在投影上整張都太小 —— 不是只有 emoji，是方塊、名稱、
+   箭頭上下的字全部。所以那兩張圖的座標整套重排過：viewBox 從 180 加高到 275、
+   方塊 175×100 放大到 205×160，字級在這裡一起放大，線寬也要跟著粗，
+   否則箭頭會細到在投影布幕上看不見（marker 尺寸預設跟著 stroke-width 走）。
+   只加在 .flow.big，不要改 .flow 本身 —— 存檔時間軸那張的 viewBox 高度 198
+   是照原字級量出來的（見該頁註解），一起放大會把底下那行字裁掉。
+   t-d 停在 22px 是上限：方塊寬 205，「你看得到的」五個字再大就會滿出方塊，
+   所以那三格的說明也拆成了兩行。 */
+.flow.big .t-e { font-size: 46px }
+.flow.big .t-t { font-size: 32px }
+.flow.big .t-d { font-size: 22px }
+.flow.big .t-a { font-size: 24px }
+.flow.big .go, .flow.big .back { stroke-width: 3.5 }
+.flow.big .nd-k { stroke-width: 3.5 }
+.flow.big .ln { stroke-width: 3 }
+.flow.big .pt { stroke-width: 4 }
+/* 存檔點的圓。刻意不叫 .dot —— 導覽列的頁碼點已經是 .dot，
+   同名的話 document.querySelectorAll('.dot') 會把這幾個 SVG 圓一起選進去，
+   任何用得到那個選擇器的程式都會取到錯的元素，而且畫面上看不出異常。 */
+.flow .pt   { fill: var(--ok); stroke: var(--surface); stroke-width: 3 }
+
+/* ── 生活化案例的卡片（P12 請一個工讀生）──
+   四張卡走同一個情境的四個步驟，底下那條虛線分隔的對照行是重點。
+   註：原本這組樣式還有一條「容量條」（.gauge 與 .story.s2/.s3/.s4），
+   是給「小明買飲料」那頁用的；那頁已移到第一堂課，樣式一併移過去了。 */
+.story { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r);
+         padding: .75rem .85rem; display: flex; flex-direction: column; gap: .38rem }
+.story .em { font-size: 1.5rem; line-height: 1.2; letter-spacing: .04em;
+             font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif }
+.story .cap { font-size: .88rem; line-height: 1.4; color: var(--ink2) }
+.story .cap b { display: block; font-size: 1rem; color: var(--ink); margin-bottom: .1rem }
+/* margin-top:auto 讓四張卡的對照行底部對齊，卡內文字長短不一也不會參差 */
+.story .map { font-size: .84rem; font-weight: 700; color: var(--brand-ink);
+              border-top: 1px dashed var(--line); padding-top: .35rem; margin-top: auto }
+/* 講故事的卡（P3 保母、P11 工讀生）：emoji 就是那一頁的圖，
+   1.5rem 在投影上會小到看起來只是裝飾，台下會直接把它當純文字卡讀過去，
+   故事的畫面感就沒了。 */
+.story.tale .em { font-size: 2.6rem }
+/* 三張卡的對照行長度差很多，均分三等份時最長的那張（第 ② 層）會折行，
+   折成兩行會把三張卡的底線推得不齊。照內容長度分配，並設成不折行。 */
+.grid.tale-row { grid-template-columns: 1fr 1.18fr .92fr }
+.story.tale .map { white-space: nowrap }
+/* panel 標題後面掛的技術名詞：.ph 是 900，不降字重的話會跟標題搶焦點 */
+.panel .ph .sub { font-weight: 400; color: var(--ink2) }
+
+/* ── 頁籤 ── */
+.tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .55rem }
+.tab { border: 0; border-radius: 10px; background: var(--fill);
+       padding: .35rem .85rem; font-family: inherit; font-size: .9rem; font-weight: 700;
+       color: var(--ink2); cursor: pointer; display: flex; align-items: center; gap: .38rem;
+       transition: background .12s, color .12s }
+.tab .k { font-size: .74rem; border-radius: 3px; padding: 0 .4em; background: rgb(0 0 0 / .07) }
+.tab:hover { background: #e3ded4 }
+.tab.on { background: var(--brand); color: #fff }
+.tab.on .k { background: rgb(255 255 255 / .24) }
+/* 全部疊在同一個 grid 格子裡：容器高度＝最長的那一個，切頁籤時版面完全不動 */
+.panes { display: grid }
+.pane { grid-area: 1 / 1; visibility: hidden }
+.pane.on { visibility: visible }
+
+/* ── Prompt 卡 ── */
+.cw { position: relative }
+.prompt { background: var(--surface); border: 1.5px solid var(--line);
+          border-left: 5px solid var(--brand); border-radius: var(--r);
+          padding: .9rem 3.4rem .9rem 1.1rem; font-size: 1.02rem; line-height: 1.62 }
+/* 直接秀在頁面上（不是彈窗裡）的檔案骨架：保留原文換行並改等寬字。
+   照 .prompt 預設的比例字排，那幾行看起來只是一段話，看不出那是一份檔案的結構。
+   等寬字族後面要接 Noto Sans TC —— Consolas 沒有中文字，不接的話中文會掉到
+   瀏覽器的預設 fallback，跟全場其他頁的字型對不起來。 */
+.prompt.pre { white-space: pre-wrap; font-size: .92rem; line-height: 1.55; padding-right: 4.2rem;
+              font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace }
+/* 編號條列手寫「1.」而不用 <ol>：複製鈕取的是 innerText，
+   list-item 的自動編號不會進 innerText —— 用 <ol> 複製出去會變成沒有編號的五行。 */
+.prompt .li { display: block; padding-left: 1em; text-indent: -1em; margin-top: .25em }
+/* 彈窗內文的編號條列。沿用同一組懸掛縮排值：不設的話第二行會縮回編號正下方，
+   兩點以上就看不出哪一行屬於哪一點。 */
+.popbody .li { display: block; padding-left: 1.35em; text-indent: -1.35em; margin-top: .45em }
+.copy { position: absolute; top: .45rem; right: .45rem;
+        background: var(--fill); border: 0; border-radius: 8px;
+        color: var(--ink2); font-size: .68rem; font-family: inherit; font-weight: 700;
+        padding: .3em .75em; cursor: pointer; transition: background .12s, color .12s }
+.copy:hover { background: #ddd7cb; color: var(--ink) }
+.copy.done { background: var(--ok); color: #fff }
+
+/* ── 彈窗內文 ── */
+.popbody { padding: .2rem .4rem .4rem; max-height: calc(100vh - 170px); overflow-y: auto }
+.popbody p { font-size: 1rem; line-height: 1.7; color: var(--ink); margin-top: 1rem }
+.popbody p:first-child { margin-top: .2rem }
+.popbody .lb { display: block; font-size: .78rem; font-weight: 900; letter-spacing: .12em;
+               color: var(--ink2); margin-bottom: .3rem }
+
+/* ── 分段出現 ── */
+[data-step] { visibility: hidden; opacity: 0; transition: opacity .28s ease-out }
+[data-step].shown { visibility: visible; opacity: 1 }
+
+/* ── 彈窗 ── */
+.pop { position: fixed; z-index: 8;
+       top: 50%; left: 0; right: 0; transform: translateY(-50%);
+       width: fit-content; max-width: 90vw; margin: 0 auto;
+       background: var(--surface); border: 1.5px solid var(--edge); border-radius: var(--r);
+       padding: .5rem; box-shadow: 0 18px 50px rgb(0 0 0 / .3) }
+.popc { visibility: hidden; opacity: 0; width: min(1020px, 90vw); transition: opacity .2s ease-out }
+.popc.shown { visibility: visible; opacity: 1 }
+.poph { display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        margin: .1rem .2rem .45rem; font-size: .9rem; font-weight: 700; color: var(--ink2) }
+.popx { border: 0; background: var(--fill); border-radius: 8px; padding: .3em .9em;
+        font-family: inherit; font-size: .85rem; font-weight: 700; color: var(--ink2); cursor: pointer }
+.popx:hover { background: #ddd7cb; color: var(--ink) }
+/* pre-wrap 保留原文的換行與縮排，複製出去才跟畫面上一模一樣。
+   代價：這段內容在 HTML 裡必須頂格寫（除了刻意的縮排），縮排會原封不動被印出來。 */
+.popc .prompt { white-space: pre-wrap; font-size: .9rem; line-height: 1.45;
+                max-height: calc(100vh - 190px); overflow-y: auto }
+.openers { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap }
+.oplabel { font-weight: 700; color: var(--ink2); margin-right: .3rem }
+.opener { border: 0; border-radius: 10px; background: var(--brand); color: #fff;
+          padding: .5rem 1.3rem; font-family: inherit; font-size: 1rem; font-weight: 700;
+          cursor: pointer; transition: background .12s }
+.opener:hover { background: var(--brand-deep) }
+
+/* 健檢頁：按鈕貼在它自己那張卡底下，不集中成一排。
+   集中成一排的話，台下要自己對「第幾顆按鈕配第幾張卡」，一定有人對錯順序然後做反。
+   margin-top:auto 讓按鈕不管卡片文字長短，都對齊在同一條底線上。 */
+.auditcards .box { display: flex; flex-direction: column }
+.auditcards .box .s { margin-bottom: .75rem }
+.auditcards .opener { margin-top: auto; width: 100%; text-align: center }
+
+/* ── 導覽列（px 固定，不隨簡報字級變動） ── */
+.nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+       background: var(--paper); border-top: 1px solid var(--line);
+       padding: 7px 18px; display: flex; align-items: center; justify-content: space-between;
+       min-height: 46px }
+.nav button { font-family: inherit; cursor: pointer }
+.arrow { background: none; border: 1px solid var(--edge); border-radius: 7px;
+         padding: 4px 13px; font-size: 14px; color: var(--ink2) }
+.arrow:hover:not(:disabled) { border-color: var(--brand-ink); color: var(--brand-ink) }
+.arrow:disabled { opacity: .45; cursor: default }
+.dots { display: flex; gap: 0; align-items: center }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #8f887c; border: 0;
+       box-sizing: content-box; padding: 8px 3px; background-clip: content-box;
+       transition: width .18s, background .18s }
+.dot.on { background: var(--brand); width: 22px; border-radius: 4px }
+.pn { font-size: 12px; color: var(--ink2); min-width: 52px; text-align: center }
+.keys { font-size: 13px; color: var(--ink2); letter-spacing: .02em }
+/* 「數字鍵切頁籤」只在有頁籤的那頁顯示。用 class 而不是硬寫頁碼：
+   中間插一頁就會讓頁碼指到別頁，而且不會報錯 —— 提示照樣顯示，只是顯示在錯的頁。 */
+.keys .onlytab { display: none }
+body.has-tabs .keys .onlytab { display: inline }
+
+@media (max-width: 900px) {
+  .g2, .g3, .dotkey { grid-template-columns: 1fr }
+  .inner { padding: 1.2rem 1.2rem 0 }
+  .keys { display: none }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ P1 ═══════════ -->
+<!-- 這頁只有圖。四色對照是圖裡英文圖例的中文版，不是新資訊——
+     圖上那行圖例在投影上會小到看不清，所以重新列一次；兩邊順序要一致。 -->
+<section class="slide on">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">開場</div>
+    <h1>AI <em>使用人口</em></h1>
+  </div>
+
+  <div class="hero" data-step="1">
+    <img src="assets/level02-hero.png" alt="2500 顆點代表全球 80 億人，每顆點依那個人最進階的 AI 使用方式上色：灰色從沒用過、綠色用免費對話、黃色每月付費、紅色讓它直接動手做東西">
+  </div>
+
+  <div class="dotkey" data-step="2">
+    <div><i style="background:#d5d2cd"></i><span><b>灰　從沒用過</b>68 億、84%</span></div>
+    <div><i style="background:#7ac08e"></i><span><b>綠　用免費對話</b>13 億、16%</span></div>
+    <div><i style="background:#e3b838"></i><span><b>黃　每月付費</b>1,500–2,500 萬、0.3%</span></div>
+    <div><i style="background:#d44f50"></i><span><b>紅　讓它直接動手做</b>200–500 萬、0.04%</span></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P2 ═══════════ -->
+<!-- 新增：先教「記憶」這個東西存在，下一頁的故事才有第 ② 層可以對。
+     順序不要調回去 —— 原本是故事直接開場，三層裡的第 ② 層是全場多數人不知道存在的東西，
+     沒先認識它，故事講完他們只會記得「有三層」，記不得第二層是什麼。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">健檢</div>
+    <h2>它記得的事，<em>比你以為的多</em></h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="panel ok" data-step="1">
+      <div class="ph">你寫的：自訂指令</div>
+      <ul>
+        <li><b>你打字打進去的</b>，你知道裡面有什麼</li>
+        <li>你隨時看得到、改得掉、刪得掉</li>
+        <li>設定 → 個人化 → 自訂指令</li>
+      </ul>
+    </div>
+    <div class="panel warn" data-step="2">
+      <div class="ph">它寫的：記憶</div>
+      <ul>
+        <li><b>你沒叫它記，它自己記下來的</b></li>
+        <li>設定 → 個人化 → <b>管理記憶</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note-inline" data-step="3">
+    你趕時間，<b>前後講過兩三次</b>「不要一直問，直接做」<br>
+    它記下來：<b>這位使用者討厭被問</b><br>
+    <b>三個月後</b>你交代一件它其實沒搞懂的事，<b>它不問了，照它猜的做</b>，結果<b>兩百個檔案全部改完，你才發現規則不對</b>
+  </div>
+
+  <div class="panel mark" data-step="4">
+    <div class="ph">記憶的好處和代價</div>
+    <ul>
+      <li><b>好處：</b>不用每次重講你的習慣</li>
+      <li><b>代價：</b>它會<b>越用越限縮</b> —— 把你這次沒說要的那些做法，先幫你砍掉了</li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P3 ═══════════ -->
+<!-- 原本的故事是「部門來了一位新總機」，太像公司教材，台下沒有畫面。
+     換成保母帶小孩：三層規矩的對應關係一模一樣，但每個人都想像得出那個下午。
+     故事和三張對照卡拆成兩頁 —— 擠在同一頁的話，故事還沒講完卡片就已經在畫面上，
+     台下會先去讀卡片上的名詞，故事就白講了。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">健檢</div>
+    <h2>它變笨了？<em>先看你自己貼了幾張紙</em></h2>
+  </div>
+
+  <div class="grid g3 tale-row">
+    <div class="story tale" data-step="1">
+      <div class="em">📋</div>
+      <div class="cap"><b>第一天，你貼在冰箱上</b>「小寶三點一定要吃點心，不然晚餐前會餓到鬧。」</div>
+      <div class="map">第 ① 層　你寫下來的，天天算數</div>
+    </div>
+    <div class="story tale" data-step="2">
+      <div class="em">📝</div>
+      <div class="cap"><b>帶了兩週，保母自己記下來</b>「他只肯吃冰淇淋，換成別的會整碗推掉。」</div>
+      <div class="map">第 ② 層　她自己寫的筆記，你沒看過</div>
+    </div>
+    <div class="story tale" data-step="3">
+      <div class="em">🌡️</div>
+      <div class="cap"><b>今天早上你出門前說</b>「他有點發燒，今天不能吃冰的。」</div>
+      <div class="map">第 ③ 層　只有今天算數</div>
+    </div>
+  </div>
+
+  <div class="panel stop" data-step="4">
+    <div class="ph">🍦 下午三點 —— 三條規矩同時生效，但湊不出一個做法</div>
+    <ul>
+      <li>給冰淇淋 → 撞到 ③，今天不能吃冰的</li>
+      <li>換別的點心 → 他整碗推掉，等於沒吃 → 撞到 ①</li>
+      <li>什麼都不給 → 直接撞到 ①，而且晚餐前會鬧</li>
+      <li><b>三條沒辦法同時做到。她只能挑一條照做</b></li>
+    </ul>
+  </div>
+
+  <div class="punch" data-step="5">結果你回家看到小寶在吃冰淇淋。<b>保母沒有變笨，是因為三張紙她沒法同時滿足</b></div>
+</div>
+</section>
+
+<!-- ═══════════ P4 ═══════════ -->
+<!-- 上一頁故事的對照表。這頁單獨存在是刻意的：三張卡是「對照」，不是新東西，
+     所以它必須出現在故事之後，而不是跟故事同時出現。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">健檢</div>
+    <h2>影響它的<em>三個地方</em></h2>
+  </div>
+
+  <div class="grid g3">
+    <div class="box" data-step="1">
+      <span class="t">① 個人化設定</span>
+      <span class="tsub">＝ 冰箱上那張</span>
+      <span class="s">設定 → 個人化。<b>你自己寫的</b>，每開一場新對話都整份送出去。<br>改完要<b>開新對話</b>才生效</span>
+    </div>
+    <div class="box" data-step="2">
+      <span class="t">② 記憶</span>
+      <span class="tsub">＝ 保母自己的筆記</span>
+      <span class="s"><b>它自己寫的</b>筆記，你沒特地去看就不會知道裡面有什麼。<br>跨對話、跨專案都會被翻出來用</span>
+    </div>
+    <div class="box" data-step="3">
+      <span class="t">③ 每個新對話</span>
+      <span class="tsub">＝ 今天早上那句</span>
+      <span class="s">你這一場交代的內容。<b>只在這裡有效</b>，換一場就沒了</span>
+    </div>
+  </div>
+
+  <div class="note-inline" data-step="4">
+    <b>記憶機制本身沒問題，問題是使用者自己在無意間累積的矛盾</b>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P5 ═══════════ -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">健檢</div>
+    <h2>三個動作，<em>二十分鐘做完一次健檢</em></h2>
+  </div>
+
+  <!-- 順序是刻意的，不要調回去：
+       原本第一步是「把你的個人化設定貼進去挑毛病」，但沒設過的人沒有東西可貼，整頁對他們空轉。
+       改成從「你真的做過事的那場對話」出發，每個人都有素材，而且它產出的句子正好是第②步的輸入。
+       原本的第③點（產出使用報告）是 Claude Code 專屬功能，台下多數人沒有，已整點移除。 -->
+  <div class="grid g3 plain auditcards">
+    <div class="box" data-step="1">
+      <span class="t">① 檢查對話方式</span>
+      <span class="s">找一場<b>你真的做完一件事</b>的長對話，<b>就在那場裡問</b> —— 證據都在那場</span>
+      <button class="opener" data-open="au-hab">稽核我的問話習慣</button>
+    </div>
+    <div class="box" data-step="2">
+      <span class="t">② 優化自訂指令</span>
+      <span class="s">把 ① 產出的句子加進自訂指令，<b>開一場新對話</b>讓它檢查</span>
+      <button class="opener" data-open="au-ci">稽核我的設定</button>
+    </div>
+    <div class="box" data-step="3">
+      <span class="t">③ 清掉記憶</span>
+      <span class="s">記憶會記住你的偏好，但也容易<b>越用越限縮</b>，把創意鎖死。<br>設定 → 個人化 → 管理記憶（依個人偏好決定）</span>
+    </div>
+  </div>
+
+  <div class="pop popc" id="au-ci">
+    <div class="poph"><span>健檢你的個人化設定 ｜ 貼到一場新對話裡</span><button class="popx" data-close>關閉</button></div>
+    <div class="cw"><button class="copy" data-c="au-ci-t" data-raw="1">複製</button>
+<div class="prompt" id="au-ci-t">以下是我目前在用的個人化設定（設定 → 個人化，英文叫 Custom Instructions），原文貼在最後面
+如果你還沒設過，就先貼第一堂課那份基礎方案當起點，再照下面檢查
+把它當成別人寫的東西來挑毛病，不要客氣，不要先誇獎
+
+請逐條檢查，每一條給一個判定：
+  1. 互相矛盾 —— 說明和第幾條衝突，以及衝突時你實際上會聽哪一條
+  2. 沒辦法檢查 —— 像「要專業」「講重點」這種，我無法判斷你有沒有照做
+  3. 只適用某一次工作 —— 日期、某個檔名、某次的預算，這種應該當次再講
+  4. 每次都送但用不到 —— 佔了額度，卻沒有改變你的行為
+
+輸出格式：
+  A. 建議刪掉的：條文 + 一句理由
+  B. 建議改寫的：直接給我改寫後的句子，我要能複製貼回去
+  C. 建議補上的：我沒寫、但你經常必須自己猜的地方
+
+最後回答我兩個問題：
+  - 如果只能留五條，你會留哪五條？為什麼？
+  - 這份設定裡有沒有任何一條，會讓你在我沒發現的情況下少做事？</div></div>
+  </div>
+
+  <div class="pop popc" id="au-hab">
+    <div class="poph"><span>健檢你的問話習慣 ｜ 在做到一半的對話裡問</span><button class="popx" data-close>關閉</button></div>
+    <div class="cw"><button class="copy" data-c="au-hab-t" data-raw="1">複製</button>
+<div class="prompt" id="au-hab-t">先暫停手上的事。回顧我們這一整場對話，回答我：
+
+  1. 我哪幾次的交代讓你必須用猜的？當時你猜了什麼？
+  2. 我重複解釋了幾次同一件事？是哪一件？
+  3. 你有沒有哪一次做完之後，我要求重做？原因是什麼？
+  4. 如果我下次要做同一件事，有哪三句話是我一開始就該先講的？
+
+第 4 題請直接寫成可以貼進 Custom Instructions 的句子
+每一句後面加一行「不寫會怎樣」
+
+不要安慰我，我要的是可以改的地方</div></div>
+  </div>
+
+  <div class="punch" data-step="4">健檢的重點不是刪掉幾條，<b>是找出它一直在猜的事</b></div>
+</div>
+</section>
+
+<!-- ═══════════ P6 ═══════════ -->
+<!-- 四個角色的方塊一開始就在畫面上（它們是「登場人物」，講者要先介紹），
+     六個箭頭才分段長出來 —— 這頁要教的是「誰傳給誰」，不是「有哪些角色」。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">觀念</div>
+    <h2>快速理解<em>前後端、資料庫與 API</em></h2>
+  </div>
+
+  <svg class="flow big" viewBox="0 0 1150 275" role="img"
+       aria-label="流程圖：客人跟服務生點餐，服務生寫成固定格式的單子送進廚房，廚房去冰箱拿材料，材料回到廚房，做好交給服務生，服務生端上桌">
+    <defs>
+      <marker id="ar7" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="var(--brand)"/>
+      </marker>
+      <marker id="ag7" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="var(--ok)"/>
+      </marker>
+    </defs>
+
+    <!-- 登場人物：不分段，一開始就在。
+         方塊 205×160、y=60~220；雙行說明放 182／208，單行放 192。 -->
+    <g>
+      <rect class="nd" x="15" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="117" y="110" text-anchor="middle">🙂</text>
+      <text class="t-t" x="117" y="158" text-anchor="middle">你</text>
+      <text class="t-d" x="117" y="192" text-anchor="middle">客人</text>
+
+      <rect class="nd-k" x="320" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="422" y="110" text-anchor="middle">📝</text>
+      <text class="t-t" x="422" y="158" text-anchor="middle">服務生</text>
+      <text class="t-d" x="422" y="182" text-anchor="middle">＝ 前端</text>
+      <text class="t-d" x="422" y="208" text-anchor="middle">你看得到的</text>
+
+      <rect class="nd" x="625" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="727" y="110" text-anchor="middle">🍳</text>
+      <text class="t-t" x="727" y="158" text-anchor="middle">廚房</text>
+      <text class="t-d" x="727" y="182" text-anchor="middle">＝ 後端</text>
+      <text class="t-d" x="727" y="208" text-anchor="middle">你看不到的</text>
+
+      <rect class="nd" x="930" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="1032" y="110" text-anchor="middle">🧊</text>
+      <text class="t-t" x="1032" y="158" text-anchor="middle">冰箱</text>
+      <text class="t-d" x="1032" y="182" text-anchor="middle">＝ 資料庫</text>
+      <text class="t-d" x="1032" y="208" text-anchor="middle">關店還在</text>
+    </g>
+
+    <g data-step="1">
+      <path class="go" d="M224,100 H312" marker-end="url(#ar7)"/>
+      <text class="t-a" x="270" y="40" text-anchor="middle">① 我要蛋炒飯</text>
+    </g>
+    <g data-step="2">
+      <path class="go" d="M529,100 H617" marker-end="url(#ar7)"/>
+      <text class="t-a t-ak" x="575" y="40" text-anchor="middle">② 單子 ＝ API</text>
+    </g>
+    <g data-step="3">
+      <path class="go" d="M834,100 H922" marker-end="url(#ar7)"/>
+      <text class="t-a" x="880" y="40" text-anchor="middle">③ 拿蛋和飯</text>
+    </g>
+
+    <g data-step="4">
+      <path class="back" d="M922,180 H838" marker-end="url(#ag7)"/>
+      <text class="t-a t-ag" x="880" y="253" text-anchor="middle">④ 材料給你</text>
+    </g>
+    <g data-step="5">
+      <path class="back" d="M617,180 H533" marker-end="url(#ag7)"/>
+      <text class="t-a t-ag" x="575" y="253" text-anchor="middle">⑤ 炒好了</text>
+    </g>
+    <g data-step="6">
+      <path class="back" d="M312,180 H228" marker-end="url(#ag7)"/>
+      <text class="t-a t-ag" x="270" y="253" text-anchor="middle">⑥ 端上桌</text>
+    </g>
+  </svg>
+
+  <div class="note-inline" data-step="7">
+    <b>② 那張單子就是 API。</b>它的格式是兩邊事先約好的 ——「幾號桌、什麼菜、幾份」，
+    少寫一欄廚房就退單
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P7 ═══════════ -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">觀念</div>
+    <h2>這工具<em>要給誰用</em></h2>
+  </div>
+
+  <table class="dt" data-step="1">
+    <tr>
+      <th style="width:22%">給誰用</th>
+      <th style="width:38%">做成什麼</th>
+      <th>例子</th>
+    </tr>
+    <tr>
+      <td class="who">① 只有我自己</td>
+      <td>一個 HTML 檔，雙擊就開</td>
+      <td class="w">貼一份名單，一鍵轉成各系統要的格式</td>
+    </tr>
+    <tr>
+      <td class="who">② 我和同事，<br>各自處理各自的資料</td>
+      <td>一樣是一個 HTML 檔，但<b>不能寫死你電腦的路徑</b>，也<b>不能要求對方先裝東西</b></td>
+      <td class="w">同一個檔傳給五個人，每個人貼自己的資料、各自看自己的結果</td>
+    </tr>
+    <tr>
+      <td class="who">③ 我和同事，<br>共用同一份資料</td>
+      <td>Google 試算表 ＋ Apps Script<br><span class="sub">資料放試算表，程式掛在上面，不用伺服器</span></td>
+      <td class="w">部門請假紀錄、客訴追蹤、值班表</td>
+    </tr>
+    <tr>
+      <td class="who">④ 全公司都會用到</td>
+      <td>要有機器一直開著、帳號權限、備份</td>
+      <td class="w">內部簽核系統、給客戶用的查詢頁</td>
+    </tr>
+  </table>
+</div>
+</section>
+
+<!-- ═══════════ P8 ═══════════ -->
+<!-- dense=high：時間軸＋五列表格＋panel＋金句 -->
+<section class="slide" data-dense="high">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">工具</div>
+    <h2>版本維護<em>（git ＝ 電玩的存檔點）</em></h2>
+    <p class="hint">它不是給工程師用的，是給「會把東西改壞」的人用的 —— 也就是全部的人</p>
+  </div>
+
+  <!-- viewBox 高度 198：底下那行 "git restore → 回到 v3" 的文字方塊實測 bottom=193。
+       設成剛好 195 會把字的下緣切掉一截，而且看起來只像字型有點怪、不像被裁切；
+       設成 205 又會讓整頁在 950px 高的視窗溢出 6px。兩邊都量過才定這個值。 -->
+  <svg class="flow big" viewBox="0 0 1150 290" role="img"
+       aria-label="時間軸：三個綠色存檔點依序是能跑了、加了分組、加了匯出，之後 AI 一次改了一大段導致壞掉，用 git restore 可以回到第三個存檔點">
+    <defs>
+      <marker id="arT" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="var(--ok)"/>
+      </marker>
+    </defs>
+
+    <!-- 座標整套放大過（原 viewBox 高 198）：投影時原字級看不見。
+         實線只畫到 v3：實線＝已經存檔的區間。v3 之後那一段是虛線，代表「這裡沒有存檔點」。
+         兩段不能都畫實線 —— 那樣紅✕ 看起來就是第四個存檔點，而「回到 v3」會被讀成
+         「在存檔點之間跳」，照做卻退不回去。 -->
+    <path class="ln" d="M80,110 H800"/>
+    <path class="ln" d="M800,110 H1030" stroke-dasharray="9 7"/>
+
+    <g data-step="1">
+      <circle class="pt" cx="170" cy="110" r="18"/>
+      <text class="t-t" x="170" y="68" text-anchor="middle">v1</text>
+      <text class="t-d" x="170" y="158" text-anchor="middle">工具能跑了</text>
+      <text class="t-d" x="170" y="186" text-anchor="middle">驗過 → 存檔</text>
+    </g>
+    <g data-step="2">
+      <circle class="pt" cx="450" cy="110" r="18"/>
+      <text class="t-t" x="450" y="68" text-anchor="middle">v2</text>
+      <text class="t-d" x="450" y="158" text-anchor="middle">加了分組</text>
+      <text class="t-d" x="450" y="186" text-anchor="middle">驗過 → 存檔</text>
+    </g>
+    <g data-step="3">
+      <circle class="pt" cx="730" cy="110" r="18"/>
+      <text class="t-t" x="730" y="68" text-anchor="middle">v3</text>
+      <text class="t-d" x="730" y="158" text-anchor="middle">加了匯出</text>
+      <text class="t-d" x="730" y="186" text-anchor="middle">驗過 → 存檔</text>
+    </g>
+    <!-- 叉號而不是實心圓：形狀就要跟綠點不一樣，讓人一眼看出它不是同一種東西。 -->
+    <g data-step="4">
+      <path d="M996,96 L1024,124 M1024,96 L996,124" stroke="var(--stop)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+      <text class="t-t" x="1010" y="68" text-anchor="middle" fill="var(--stop)">沒存</text>
+      <text class="t-d" x="1010" y="158" text-anchor="middle">AI 一次改了一大段</text>
+      <text class="t-d" x="1010" y="186" text-anchor="middle" fill="var(--stop)">壞了，說不出是哪裡</text>
+    </g>
+
+    <g data-step="5">
+      <path class="back" d="M1010,215 C1010,258 730,258 730,142" marker-end="url(#arT)"/>
+      <text class="t-a t-ag" x="850" y="280" text-anchor="middle">git restore → 把還沒存的丟掉，回到 v3，一個指令的事</text>
+    </g>
+  </svg>
+
+  <table class="dt" data-step="6">
+    <tr><th style="width:22%">指令</th><th style="width:32%">白話</th><th>你什麼時候需要它</th></tr>
+    <tr><td class="k">git commit</td><td><b>存檔</b>，順便寫一句這次改了什麼</td><td class="w"><b>每次驗收完，立刻做</b></td></tr>
+    <tr><td class="k">git log</td><td>看目前有哪些存檔點</td><td class="w">想退回去之前，先看看能退到哪一個</td></tr>
+    <tr><td class="k">git restore</td><td><b>讀檔</b>：把還沒存檔的改動<b>全部丟掉</b>，回到上一個存檔點</td><td class="w">改壞了、而且不知道怎麼救</td></tr>
+  </table>
+
+  <div class="note-inline" data-step="7">
+    <b>你不用自己裝、也不用自己打這些指令</b>，你唯一要記住的是<b>時機 —— 驗收完，就 commit</b>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P9 ═══════════ -->
+<!-- 案例換過一次。原本是「新進人員到職作業」29 個步驟：
+     十位試聽者裡有三位（非人資職）明講整頁跟自己無關，滿頁的 HRM／S 槽／勞保局
+     對他們是純噪音，而它偏偏是全場結論最重要的一頁。
+     換成會議記錄：第一堂課的開場痛點就是這個，每個職能都開會，一頁拆得完。
+     原本的第二頁（把 ③④⑦ 三段攤在畫面上）已併進來 —— 那三段本來就是拿來複製的、不是拿來唸的，
+     所以只留一顆按鈕，投影片上不再展開。 -->
+<section class="slide" data-dense="high">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">案例</div>
+    <h2>常見案例：<em>整理會議記錄</em></h2>
+  </div>
+
+  <div class="tabgroup" data-step="1">
+    <div class="tabs">
+      <button class="tab on" data-t="a"><span class="k">1</span>可自動</button>
+      <button class="tab" data-t="b"><span class="k">2</span>半自動</button>
+      <button class="tab" data-t="c"><span class="k">3</span>不能自動</button>
+      <button class="tab" data-t="d"><span class="k">4</span>關鍵判斷</button>
+    </div>
+
+    <div class="panes">
+    <div class="pane on" data-t="a">
+      <div class="slist">
+        <div class="srow a"><span class="tag">可自動</span><span class="bd"><span class="no">步驟 2</span>　把當場亂記的筆記，整理成通順的段落</span></div>
+        <div class="srow a"><span class="tag">可自動</span><span class="bd"><span class="no">步驟 3</span>　從裡面挑出「這次的決議」</span></div>
+        <div class="srow a"><span class="tag">可自動</span><span class="bd"><span class="no">步驟 4</span>　列出待辦候選：誰、做什麼、什麼時候前</span></div>
+        <div class="srow a"><span class="tag">可自動</span><span class="bd">產出可以直接貼進 Excel 的表格</span></div>
+      </div>
+    </div>
+
+    <div class="pane" data-t="b">
+      <div class="slist">
+        <div class="srow b"><span class="tag">半自動</span><span class="bd"><span class="no">步驟 5</span>　會議記錄的信：<b>產草稿，你自己送出</b></span></div>
+        <div class="srow b"><span class="tag">半自動</span><span class="bd">請假、缺席的人要不要補寄：名單它列，<b>你決定</b></span></div>
+      </div>
+    </div>
+
+    <div class="pane" data-t="c">
+      <div class="slist">
+        <div class="srow c"><span class="tag">不能自動</span><span class="bd"><span class="no">步驟 1</span>　開會當下的記錄　<b>→ 要有人在現場聽</b></span></div>
+        <div class="srow c"><span class="tag">不能自動</span><span class="bd">會議上對客戶、對主管的承諾　<b>→ 責任在人身上</b></span></div>
+        <div class="srow c"><span class="tag">不能自動</span><span class="bd">把記錄丟進外部工具前，敏感資料要先去識別化　<b>→ 每次都要</b></span></div>
+      </div>
+    </div>
+
+    <div class="pane" data-t="d">
+      <div class="slist">
+        <div class="srow d"><span class="tag">關鍵判斷</span><span class="bd">什麼才算「決議」？討論過但沒拍板的，<b>不是</b></span></div>
+        <div class="srow d"><span class="tag">關鍵判斷</span><span class="bd">會議上沒點名負責人的待辦，<b>一律標「待確認」，不要自己指派</b></span></div>
+        <div class="srow d"><span class="tag">關鍵判斷</span><span class="bd">規則由<b>你</b>寫下來，它只負責照規則挑</span></div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="openers" data-step="2">
+    <span class="oplabel">照著這份講，它就只會做該做的那一段（可以直接複製）：</span>
+    <button class="opener" data-open="case-full">第一版需求描述　完整五段</button>
+  </div>
+
+  <div class="pop popc" id="case-full">
+    <div class="poph"><span>第一版需求描述 ｜ 會議記錄整理</span><button class="popx" data-close>關閉</button></div>
+    <div class="cw"><button class="copy" data-c="case" data-raw="1">複製</button>
+<div class="prompt" id="case">我負責部門每週例會的會議記錄。整套流程有 6 個步驟，這次只處理其中一段。
+
+1. 問題：開完會我手上是一份很亂的筆記，要自己重讀一遍、整理成通順的段落、挑出這次的決議、再列出每個人的待辦。而且筆記裡到處是簡稱（「小陳」「PJ 那案子」），組裡每個人寫的簡稱還不一樣，新人完全看不懂。
+
+2. 我要的：一個網頁工具。我把筆記整段貼進去，它產出四個區塊：
+   - 整理過的會議摘要
+   - 這次的決議清單
+   - 待辦表格（負責人／要做的事／期限），欄位順序固定
+   - 這次的新名詞清單：它看不懂、或猜不準的簡稱，一條一條列出來讓我確認
+
+3. 重要需知：
+   - 名詞庫由人維護。工具只能「提議」新增或修改，一律要我逐條按確認才寫進去
+   - 沒有明確點到名的待辦，負責人一律填「待確認」，不要自己指派
+   - 討論過但沒有拍板的事情，不要放進決議清單
+   - 不寄任何信、不連行事曆
+
+4. 技術限制：名詞庫放在我們部門的 Google 試算表，工具用 Apps Script 讀寫，組裡每個人都看得到、也改得到。
+   不要另外架伺服器，不要用到任何需要申請或安裝的東西。
+   Why: 「小陳是誰」不是我一個人的事，這份對照表本來就該全組共用；而且我請假的時候別人也要跑得動。
+
+5. 怎樣算完成：前三個區塊的內容，跟我上次手動整理的那份對得起來。判斷不了的要單獨列出來讓我確認，不要自己補。
+   新名詞要在我逐條按過確認之後，才會出現在試算表裡；我沒確認的，下次還要再問我一次。
+
+先不要開始。請先用你自己的話說一次你理解的需求，並列出你打算產出的四個區塊各有哪些欄位。有不懂的先問我，不要猜。</div></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P10 ═══════════ -->
+<!-- 這張圖原本是「在購物 App 買一雙鞋」，跟前一頁的會議記錄案例斷開，
+     台下要重新建立一個情境才看得懂，而這頁真正的重點（底下那張三格表）反而被圖拖累。
+     改成同一個會議記錄工具「升級成組內共用」的版本：
+     只有升到共用，它才會長出後端和資料庫，六個箭頭才成立 —— 也正好接住工具頁的第 ③ 層。 -->
+<section class="slide" data-dense="high">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">排查</div>
+    <h2>我要如何知道<em>問題發生在哪</em></h2>
+  </div>
+
+  <svg class="flow big" viewBox="0 0 1150 264" role="img"
+       aria-label="流程圖：你在網頁表單貼進會議筆記按整理，表單把筆記送給 Apps Script，Apps Script 去 Google 試算表查名詞庫和上週待辦，試算表回覆對照結果，Apps Script 回傳整理好的區塊，畫面顯示結果並列出待你確認的新名詞">
+    <defs>
+      <marker id="ar8" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="var(--brand)"/>
+      </marker>
+      <marker id="ag8" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="var(--ok)"/>
+      </marker>
+    </defs>
+
+    <g>
+      <rect class="nd" x="15" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="117" y="110" text-anchor="middle">🙂</text>
+      <text class="t-t" x="117" y="158" text-anchor="middle">你</text>
+      <text class="t-d" x="117" y="192" text-anchor="middle">開完會</text>
+
+      <rect class="nd-k" x="320" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="422" y="110" text-anchor="middle">📝</text>
+      <text class="t-t" x="422" y="158" text-anchor="middle">網頁表單</text>
+      <text class="t-d" x="422" y="192" text-anchor="middle">＝ 前端</text>
+
+      <rect class="nd" x="625" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="727" y="110" text-anchor="middle">⚙️</text>
+      <text class="t-t" x="727" y="158" text-anchor="middle">Apps Script</text>
+      <text class="t-d" x="727" y="192" text-anchor="middle">＝ 後端</text>
+
+      <rect class="nd" x="930" y="60" width="205" height="160" rx="14"/>
+      <text class="t-e" x="1032" y="110" text-anchor="middle">🗄️</text>
+      <text class="t-t" x="1032" y="158" text-anchor="middle">試算表</text>
+      <text class="t-d" x="1032" y="182" text-anchor="middle">名詞庫</text>
+      <text class="t-d" x="1032" y="208" text-anchor="middle">＋待辦追蹤</text>
+    </g>
+
+    <g data-step="1">
+      <path class="go" d="M224,100 H312" marker-end="url(#ar8)"/>
+      <text class="t-a" x="270" y="40" text-anchor="middle">① 貼進筆記，按「整理」</text>
+    </g>
+    <g data-step="2">
+      <path class="go" d="M529,100 H617" marker-end="url(#ar8)"/>
+      <text class="t-a t-ak" x="575" y="40" text-anchor="middle">② 會議日期／筆記全文</text>
+    </g>
+    <g data-step="3">
+      <path class="go" d="M834,100 H922" marker-end="url(#ar8)"/>
+      <text class="t-a" x="880" y="40" text-anchor="middle">③ 「小陳」是誰？</text>
+    </g>
+
+    <g data-step="4">
+      <path class="back" d="M922,180 H838" marker-end="url(#ag8)"/>
+      <text class="t-a t-ag" x="880" y="253" text-anchor="middle">④ 陳○○／業務二部</text>
+    </g>
+    <g data-step="5">
+      <path class="back" d="M617,180 H533" marker-end="url(#ag8)"/>
+      <text class="t-a t-ag" x="575" y="253" text-anchor="middle">⑤ 整理好的三個區塊</text>
+    </g>
+    <g data-step="6">
+      <path class="back" d="M312,180 H228" marker-end="url(#ag8)"/>
+      <text class="t-a t-ag" x="270" y="253" text-anchor="middle">⑥ 顯示結果＋2 個新名詞待確認</text>
+    </g>
+  </svg>
+
+  <!-- 三欄＝一則能被處理的回報的最低限度。刻意只舉三個例子，不是四段都列 ——
+       這頁要教的是「格式」，不是「分類」。 -->
+  <div class="punch" data-step="7">與 AI 說明 bug 的方式：<b>發生步驟 ＋ 預期結果 ＋ 實際結果</b></div>
+
+  <table class="dt roomy" data-step="8">
+    <tr><th style="width:13%">大概哪一段</th><th style="width:29%">① 發生步驟</th><th style="width:25%">② 預期結果</th><th>③ 實際結果</th></tr>
+    <tr><td class="k">①⑥ 前端</td><td>貼進上週的筆記，按「整理」</td><td>畫面出現三個區塊</td><td class="w">按鈕沒反應，畫面停在原地</td></tr>
+    <tr><td class="k">③⑤ 後端</td><td>筆記裡寫的是「小陳」</td><td>對成「陳○○（業務二部）」</td><td class="w">還是「小陳」，名詞庫沒有對到</td></tr>
+    <tr><td class="k">④ 資料庫</td><td>逐條按下「加入名詞庫」</td><td>試算表的名詞庫分頁多兩列</td><td class="w">試算表查不到，但畫面說已加入</td></tr>
+  </table>
+</div>
+</section>
+
+<!-- ═══════════ P11 ═══════════ -->
+<!-- 這頁原本是「四張名詞卡＋四列決策表」，十位試聽者給它 0 個「看得懂」、
+     九位說字太密，五位主動要求「換成一個貫穿的故事」。
+     改成同一個情境（請一個工讀生）走三步，三個名詞掛在同一條線上。決策表整個拿掉。
+     第四張卡（斜線指令）已移除：那是「入口」不是「你給她的東西」，跟另外三張不同層，
+     放在一起會讓「Skill／MCP／Agent」這組三分法被稀釋成四個並列的名詞。
+     標題直接就是結論，所以頁尾原本那句同文的金句也一併拿掉，不重複兩次。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">進階</div>
+    <h2>Skill 是<em>知識</em>，MCP 是<em>權限</em>，Agent 是<em>人力</em></h2>
+    <p class="hint">你請了一個工讀生。你會給她三種東西，剛好就是那三個常聽到的名詞</p>
+  </div>
+
+  <div class="grid g3">
+    <div class="story tale" data-step="1">
+      <div class="em">📋</div>
+      <div class="cap"><b>你給她好幾份 SOP</b>她不用背，需要的時候再去查</div>
+      <div class="map">這叫 Skill ＝ 你給的是<b>知識</b></div>
+    </div>
+    <div class="story tale" data-step="2">
+      <div class="em">🔑</div>
+      <div class="cap"><b>你幫她開通網路硬碟</b>不然她連資料放在哪裡都看不到，只能一直跟你要</div>
+      <div class="map">這叫 MCP ＝ 你給的是<b>權限</b></div>
+    </div>
+    <div class="story tale" data-step="3">
+      <div class="em">🙋</div>
+      <div class="cap"><b>你請她做一份活動企劃</b>她參考過去的資料以及新需求，設計新企劃</div>
+      <div class="map">這叫 Agent ＝ 你給的是<b>人力</b></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P12 ═══════════ -->
+<!-- 密度維持 high，不要放回 mid：刪了導言和結語之後看起來還有空間，
+     但實測 1920x1011（密度斷點正上方，最壞情況）改成 mid 會溢出 5px，
+     而 .slide 是 overflow-y:auto —— 溢出不會裁切、只會變成可捲動，
+     投影時看起來就是「最後一列不見了」而且沒有任何異常徵兆。 -->
+<section class="slide" data-dense="high">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">進階</div>
+    <h2>那份 SOP，<em>要怎麼存、放到哪</em></h2>
+  </div>
+
+  <div class="cw" data-step="1"><button class="copy" data-c="sk-fmt" data-raw="1">複製</button>
+<div class="prompt pre" id="sk-fmt">---
+name: meeting-notes
+description: 開完會要把筆記整理成摘要、決議、待辦時使用。觸發字：會議記錄、例會、待辦、決議。
+---
+
+用白話寫流程</div></div>
+
+  <div class="grid g2">
+    <div class="panel ok" data-step="2">
+      <div class="ph">① 存在 ChatGPT<span class="sub">　不用碰檔案</span></div>
+      <ul>
+        <li><b>有 ChatGPT Work：</b>打 <code>@skill-creator</code>，它問你幾題就幫你建好<br><span class="sub">桌面版側欄的「Skills」看得到建過哪些</span></li>
+        <li><b>沒有的話：</b>開一個專案，整份貼進「專案設定 → 指令」</li>
+      </ul>
+    </div>
+    <div class="panel warn" data-step="3">
+      <div class="ph">② 存在地端專案裡<span class="sub">　Codex</span></div>
+      <ul>
+        <li><b>專案技能</b>（跟著程式碼交給同事）：<br><code>專案根目錄/.agents/skills/meeting-notes/SKILL.md</code><br><span class="sub">資料夾名字跟 <code>name</code> 取一樣</span></li>
+        <li><b>全域技能：</b><br><code>~/.agents/skills/meeting-notes/SKILL.md</code></li>
+        <li><b>怎麼看：</b>打 <code>/skills</code> 看清單，或打 <code>$</code> 直接選</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="openers" data-step="4">
+    <span class="oplabel">照抄就能改的完整範例（就是剛才那個會議記錄案例）：</span>
+    <button class="opener" data-open="sk-demo">看完整範例</button>
+    <button class="opener" data-open="sk-test">怎麼驗它有沒有效</button>
+  </div>
+
+  <div class="pop popc" id="sk-demo">
+    <div class="poph"><span>SKILL.md ｜ 會議記錄整理</span><button class="popx" data-close>關閉</button></div>
+    <div class="cw"><button class="copy" data-c="sk-demo-t" data-raw="1">複製</button>
+<div class="prompt" id="sk-demo-t">---
+name: meeting-notes
+description: 開完會要把亂記的筆記整理成會議摘要、決議清單和待辦表格時使用。
+  觸發字：會議記錄、例會、開完會、會議摘要、待辦、決議。
+---
+
+# 會議記錄整理
+
+## 需要的輸入
+一份會議筆記或逐字稿，以及這場會議的日期與名稱。
+人名、客戶名、還沒公開的數字要先換成代號再貼進來。
+Why: 會議記錄裡幾乎一定有還沒對外的東西，貼出去收不回來。
+
+## 步驟
+1. 先把筆記整理成通順的會議摘要。
+2. 挑出這次的決議清單。討論過但沒有拍板的，不要放進來。
+3. 產出待辦表格，欄位固定為：負責人 / 要做的事 / 期限。
+   會議上沒有明確點到名的，負責人一律填「待確認」。
+   Why: 自己指派的話，被指派的那個人不知道自己被指派了。
+4. 三個區塊分開放，方便逐塊複製。
+
+## 不要做
+- 不要寄任何信，只把內容放在畫面上讓我複製。
+- 不要連行事曆自動建立提醒。
+- 不要替我補上筆記裡沒有的結論。
+
+## 怎樣算完成
+三個區塊的內容跟筆記對得起來，判斷不了的單獨列出來讓我確認，不要自己補。</div></div>
+  </div>
+
+  <div class="pop popc" id="sk-test">
+    <div class="poph"><span>驗收：它會不會自己想到要用</span><button class="popx" data-close>關閉</button></div>
+    <div class="popbody">
+      <p><span class="lb">兩種叫出來的方式</span><b>手動叫：</b>ChatGPT 打 <code>@meeting-notes</code>；Codex 打 <code>/skills</code> 從清單選，或打 <code>$meeting-notes</code>。<b>自動叫：</b>它讀 description，判斷你這次講的話對不對得上。<br>寫 skill 的目的是後者 —— 前者你本來就記得，那不需要 skill</p>
+      <p><span class="lb">怎麼驗</span>開一場<b>全新的對話</b>，用你平常會講的自然說法講一句，例如「剛開完週會，筆記我貼給你」。然後看它有沒有自己翻開這份 skill</p>
+      <p><span class="lb">沒叫出來怎辦</span>
+        <span class="li"><b>1. 要開一場新對話才算數。</b>舊對話裡前面講過的內容會提示它，你會得到一個假的成功</span>
+        <span class="li"><b>2. 直接問它。</b>「你剛才為什麼沒讀到那份 skill？什麼條件下你才會自動啟用它？」照它講的去補 description 的觸發字，再試一次</span></p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ P13 ═══════════ -->
+<section class="slide">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">收尾</div>
+    <h1>工具天天在變，<em>背流程永遠追不上</em></h1>
+  </div>
+
+  <div class="punch" data-step="1">所以這兩堂課教的不是步驟，是<b>概念</b> —— <b>概念會了，換什麼工具你都舉一反三</b></div>
+</div>
+</section>
+
+<!-- ═══════════ 導覽 ═══════════ -->
+<nav class="nav">
+  <button class="arrow" id="prev">← 上一頁</button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="dots" id="dots"></div>
+    <span class="pn" id="pn"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="keys">→ 下一段／下一頁　<span class="onlytab">1-4 切分類　</span>A 全開　F 全螢幕</span>
+    <button class="arrow" id="full">⛶ 全螢幕</button>
+    <button class="arrow" id="next">下一頁 →</button>
+  </div>
+</nav>
+
+<script>
+'use strict';
+// 執行期只切 class，不做任何版面量測。
+
+const slides = document.querySelectorAll('.slide');
+const total  = slides.length;
+const dotBar = document.getElementById('dots');
+const pnEl   = document.getElementById('pn');
+const prevEl = document.getElementById('prev');
+const nextEl = document.getElementById('next');
+let cur = 0;
+
+const dots = slides2dots();
+function slides2dots() {
+  const arr = [];
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('button');
+    d.className = 'dot';
+    d.title = 'P' + (i + 1);
+    d.addEventListener('click', () => goTo(i, { jump: true }));
+    dotBar.appendChild(d);
+    arr.push(d);
+  }
+  return arr;
+}
+
+// ── 分段出現 ──
+// 有 data-step 的元素依序顯示；一頁的段落走完才換頁。
+// 往回翻時整頁直接展開 —— 講者回頭是要看完整內容，不是重按一次。
+const stepsOf = i => [...slides[i].querySelectorAll('[data-step]')];
+function revealNext(i) {
+  const next = stepsOf(i).find(el => !el.classList.contains('shown'));
+  if (!next) return false;
+  shutPopc();
+  next.classList.add('shown');
+  return true;
+}
+// !! 不可省：classList.toggle 第二參數若是 undefined，會被當成「沒給」而變成切換，
+// 導致進入新頁時分段狀態被反轉而不是重設。
+const setSteps = (i, shown) =>
+  stepsOf(i).forEach(el => el.classList.toggle('shown', !!shown));
+
+function goTo(i, opts) {
+  i = i < 0 ? 0 : i > total - 1 ? total - 1 : i;
+  if (i === cur) return;
+  const back = i < cur;
+  slides[cur].classList.remove('on');
+  dots[cur].classList.remove('on');
+  cur = i;
+  slides[cur].classList.add('on');
+  dots[cur].classList.add('on');
+  slides[cur].scrollTop = 0;
+  shutPopc();
+  // 直接跳頁（點圓點／Home／End）也視為要看完整內容
+  setSteps(cur, back || (opts && opts.jump));
+  // 用滑鼠點過導覽鈕後焦點會留在那顆鈕上，接著按空白鍵會「再按一次它」——
+  // 講者按了上一頁再按空白想前進，會一路往回翻，而且畫面看不出異常。
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  document.body.dataset.p = cur + 1;
+  document.body.classList.toggle('has-tabs', !!slides[cur].querySelector('.tabgroup'));
+  paint();
+}
+function paint() {
+  pnEl.textContent = 'P' + (cur + 1) + ' / ' + total;
+  prevEl.disabled = cur === 0;
+  nextEl.disabled = cur === total - 1;
+}
+dots[0].classList.add('on');
+document.body.dataset.p = 1;
+paint();
+
+// 全螢幕：版面是照全螢幕比例調的，沒進全螢幕時導覽列會吃掉一截高度
+const fullEl = document.getElementById('full');
+function toggleFull() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+fullEl.addEventListener('click', toggleFull);
+document.addEventListener('fullscreenchange', () => {
+  fullEl.textContent = document.fullscreenElement ? '⛶ 離開全螢幕' : '⛶ 全螢幕';
+});
+
+// 前進＝先把這頁沒出現的段落放出來，全部出現了才換頁
+function advance() { if (!revealNext(cur)) goTo(cur + 1); }
+prevEl.addEventListener('click', () => goTo(cur - 1));
+nextEl.addEventListener('click', advance);
+
+// 點按鈕開的彈窗。它們沒有 data-step，不在分段序列裡，
+// 所以切頁和推進段落時要另外關掉 —— 不關的話會蓋住下一段，而且回到這頁時還開著。
+function shutPopc() {
+  document.querySelectorAll('.popc.shown').forEach(p => p.classList.remove('shown'));
+}
+document.querySelectorAll('[data-open]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = document.getElementById(btn.dataset.open);
+    const open = !t.classList.contains('shown');
+    shutPopc();                       // 兩個不同時開，避免疊在一起
+    t.classList.toggle('shown', open);
+  });
+});
+document.querySelectorAll('[data-close]').forEach(b => {
+  b.addEventListener('click', () => b.closest('.popc').classList.remove('shown'));
+});
+
+// 分類頁籤
+function pickTab(group, key) {
+  group.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.t === key));
+  group.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.dataset.t === key));
+}
+document.querySelectorAll('.tabgroup').forEach(g => {
+  g.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => pickTab(g, t.dataset.t)));
+});
+
+// 空白鍵與 Backspace 是簡報筆最常送的兩個鍵，一定要綁。
+// 用 Object.create(null) 建表，避免 e.key 命中 Object.prototype 上既有的名稱。
+const NAV = Object.assign(Object.create(null), {
+  ArrowRight: 1, ArrowDown: 1, PageDown: 1, ' ': 1,
+  ArrowLeft: -1, ArrowUp: -1, PageUp: -1, Backspace: -1
+});
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;  // 放行瀏覽器快捷鍵
+  if (e.repeat) return;                            // 簡報筆按鈕頂住時不要一路衝到最後一頁
+  const k = e.key;
+  const step = NAV[k];
+  // preventDefault：沒有它，方向鍵會「翻頁的同時又把新那頁往下捲」
+  if (step === 1)  { e.preventDefault(); advance(); return; }
+  if (step === -1) { e.preventDefault(); goTo(cur - 1); return; }
+  if (k === 'Escape') { shutPopc(); return; }
+  if (k === 'Home') { e.preventDefault(); goTo(0, { jump: true }); return; }
+  if (k === 'End')  { e.preventDefault(); goTo(total - 1, { jump: true }); return; }
+  // A：一次攤開這頁所有段落（講者想跳過分段節奏時用）
+  if (k === 'a' || k === 'A') { setSteps(cur, true); return; }
+  if (k === 'f' || k === 'F') { toggleFull(); return; }
+  if (k >= '1' && k <= '9') {
+    const g = slides[cur].querySelector('.tabgroup');
+    if (!g) return;
+    const t = g.querySelectorAll('.tab')[+k - 1];
+    if (t) pickTab(g, t.dataset.t);
+  }
+});
+
+// 複製：預設逐行去縮排（給單行 prompt 用）；
+// data-raw="1" 的保留原樣 —— SKILL.md 的 YAML 與縮排條列被 trim 掉就貼不回去了。
+function legacyCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+document.querySelectorAll('.copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const src = document.getElementById(btn.dataset.c);
+    if (!src) return;
+    const raw  = btn.dataset.raw === '1';
+    const text = raw ? src.innerText.trim()
+                     : src.innerText.split('\n').map(l => l.trim()).join('\n').trim();
+    const flash = (label, done) => {
+      btn.textContent = label;
+      btn.classList.toggle('done', !!done);
+      setTimeout(() => { btn.textContent = '複製'; btn.classList.remove('done'); }, 1600);
+    };
+    const win  = () => flash('已複製', true);
+    const lose = () => { if (legacyCopy(text)) win(); else flash('請手動選取'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(win, lose);
+    } else lose();
+  });
+});
+</script>
+</body>
+</html>

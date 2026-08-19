@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帶 AI 做事 ｜ 工作坊教材</title>
+<meta name="description" content="給零程式經驗同仁的兩堂 AI 工作坊教材：第一堂把工作說清楚，第二堂把工具養起來。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 跟兩份簡報同一套非阻擋載入：字型只是加分項。
+     企業防火牆丟包或訪客 Wi-Fi 要認證時，用 rel=stylesheet 會擋住首次繪製。 -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<noscript><link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap"></noscript>
+<style>
+/* 色票與字型跟兩份簡報完全一致 —— 從首頁點進簡報時不應該有換了個網站的感覺 */
+:root {
+  --paper: #f2efe7;  --surface: #ffffff;  --fill: #e9e4d8;
+  --ink: #1a1a1a;    --ink2: #5f594f;     --line: #ccc0a4;  --edge: #9a8d78;
+  --brand: #d2501f;  --brand-ink: #a83e17; --brand-deep: #b8441a; --brand-tint: #fbe8dd;
+  --ok: #2c6e4b;     --r: 14px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+  background: var(--paper); color: var(--ink); line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 3rem 1.25rem;
+}
+.wrap { width: 100%; max-width: 940px; }
+
+.eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .18em;
+           color: var(--brand-ink); margin-bottom: .55rem }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 900; letter-spacing: -.035em; line-height: 1.2 }
+h1 em { color: var(--brand); font-style: normal }
+.lede { color: var(--ink2); margin-top: .9rem; font-size: clamp(.95rem, 2.2vw, 1.05rem) }
+
+/* 兩張卡＝兩堂課。整張卡就是連結，不要另外做一顆小按鈕 ——
+   投影或手機上「可以點的範圍」越大越不會點空。 */
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.1rem; margin: 2.2rem 0 1.6rem }
+@media (max-width: 720px) { .cards { grid-template-columns: 1fr } }
+
+.card {
+  display: flex; flex-direction: column; gap: .45rem;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r);
+  padding: 1.4rem 1.5rem 1.5rem; text-decoration: none; color: inherit;
+  transition: border-color .14s, transform .14s, box-shadow .14s;
+}
+.card:hover, .card:focus-visible {
+  border-color: var(--brand); transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgb(0 0 0 / .09); outline: none;
+}
+.card .lv { font-size: .74rem; font-weight: 900; letter-spacing: .14em; color: var(--brand-ink) }
+.card .tt { font-size: 1.35rem; font-weight: 900; letter-spacing: -.02em; line-height: 1.3 }
+.card .ds { font-size: .93rem; color: var(--ink2); line-height: 1.65 }
+.card .go { margin-top: .7rem; font-size: .9rem; font-weight: 700; color: var(--brand) }
+.card .go::after { content: ' →' }
+
+.tips { background: var(--fill); border-left: 5px solid var(--edge); border-radius: var(--r);
+        padding: 1rem 1.2rem; font-size: .9rem; color: var(--ink2); line-height: 1.75 }
+.tips b { color: var(--ink) }
+.tips kbd { font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--brand-ink);
+            background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+            padding: 0 .38em; font-size: .92em }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">工作坊教材</div>
+  <h1>帶 AI 做事，<em>不用先會寫程式</em></h1>
+  <p class="lede">兩堂課，給完全沒有程式經驗的同仁。第一堂學會把事情講清楚，第二堂學會把做法留下來。</p>
+
+  <div class="cards">
+    <a class="card" href="vibe-coding-guide-level-01.html">
+      <span class="lv">LEVEL 01</span>
+      <span class="tt">把工作說清楚</span>
+      <span class="ds">AI 猜不到你沒講的。先學會交代五件事：我是誰、問題是什麼、要什麼、不要什麼、怎樣算完成。</span>
+      <span class="go">開始第一堂</span>
+    </a>
+    <a class="card" href="vibe-coding-guide-level-02.html">
+      <span class="lv">LEVEL 02</span>
+      <span class="tt">把工具養起來</span>
+      <span class="ds">會用之後怎麼守得住：健檢你的設定、看懂東西壞在哪一段、把你的做法存成一份可以交接的 SOP。</span>
+      <span class="go">開始第二堂</span>
+    </a>
+  </div>
+
+  <div class="tips">
+    <b>兩份都是簡報，建議用電腦開、按 <kbd>F</kbd> 進全螢幕。</b><br>
+    <kbd>→</kbd> 下一段／下一頁　·　<kbd>←</kbd> 上一頁　·　<kbd>A</kbd> 一次攤開整頁　·　<kbd>Esc</kbd> 關閉彈窗
+  </div>
+</div>
+</body>
+</html>
