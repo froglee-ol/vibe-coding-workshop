@@ -22,7 +22,12 @@
    不用 JS 算寬度 —— 投影機解析度不一，量出來的值不可信。
    ═══════════════════════════════════════════════════════ */
 
-html { font-size: clamp(16px, min(1.02vw, 2.05vh) + 5.5px, 30px); }
+/* 高度那一項原本是 2.05vh：跟 1.02vw 的交叉點落在寬高比 2.01，
+   所以寬高比 1.86–2.01 的視窗（2048x1023、最大化在寬螢幕上）會由寬度主導 ——
+   字照寬度放大，可用高度卻更少，實測會讓好幾頁溢出。改成 1.9vh 把交叉點拉到 1.86，
+   16:9 的所有尺寸（1280x720 / 1366x768 / 1600x900 / 1920x1080 / 2560x1440）
+   算出來的值一字不差，只有比 16:9 更寬的視窗會變小。 */
+html { font-size: clamp(16px, min(1.02vw, 1.9vh) + 5.5px, 30px); }
 
 :root {
   --paper:      #f2efe7;
@@ -162,6 +167,10 @@ code { font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace;
    圖不放大到超過原尺寸（width/height:auto + max-*），否則點會糊掉。 */
 .hero { display: flex; justify-content: center }
 .hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 70vh; border-radius: 10px }
+/* 70vh 是照 16:9 滿版回推的。視窗比 16:9 更寬時（寬高比 ≥ 1.86），高度相對變少，
+   但標題與四色對照不會跟著縮，70vh 會把整頁擠爆 —— 實測 2048x1023 溢出 34px。
+   只在寬螢幕收成 60vh，16:9 的尺寸完全不受影響。 */
+@media (min-aspect-ratio: 1.86) { .hero img { max-height: 60vh } }
 /* 四色對照：色塊要夠大才在投影上分得出黃和紅，用方塊不用圓點 —— 跟圖裡的方塊一致 */
 .dotkey { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem 1.1rem }
 .dotkey div { display: flex; align-items: flex-start; gap: .5rem; font-size: .9rem; line-height: 1.45; color: var(--ink2) }
