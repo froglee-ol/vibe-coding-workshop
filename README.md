@@ -29,7 +29,7 @@
 
 ```
 index.html                          入口頁
-vibe-coding-guide-level-01.html     第一堂（14 頁）
+vibe-coding-guide-level-01.html     第一堂（16 頁）
 vibe-coding-guide-level-02.html     第二堂（13 頁）
 assets/                             四張內嵌截圖
 ```

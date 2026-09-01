@@ -332,6 +332,22 @@ code { font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace;
    現場捲動等於全場等你找最後一段。矮視窗仍會出現捲軸，那是保底不是常態。 */
 .popc .prompt { white-space: pre-wrap; font-size: .9rem; line-height: 1.35;
                 max-height: calc(100vh - 190px); overflow-y: auto }
+/* 設定檔全文專用：兩份 Custom Instructions 加長到 33 行之後，用預設的 980px/.9rem
+   在 1080p 全螢幕下會出現捲軸 —— 現場捲動等於全場等你找最後一段。
+   加寬是為了讓每一條規則都排得下一行（折行會多吃掉將近十行的高度），
+   字級再收一階換到剩下的行數。這組數字只給這兩個彈窗，P10 的交接單維持原樣。
+
+   寬度綁 rem 不綁 px：字級是跟著螢幕尺寸放大的，寬度寫死 px 的話 1440p 上
+   每行放得下的字數會比 1080p 少一截，長規則就開始折行。用 rem 讓兩者同步縮放，
+   每行字數在所有解析度上都一樣，這兩份全文才只需要驗一次。 */
+.popc.wide { width: min(50rem, 92vw) }
+.popc.wide .prompt { font-size: .78rem; line-height: 1.22; padding: .55rem 3.4rem .55rem 1.1rem;
+                     max-height: calc(100vh - 168px) }
+/* max-height 扣掉的 168px 是固定值，視窗愈矮它就吃掉愈大一塊比例，而字級是綁螢幕「寬度」的 ——
+   結果就是 768p / 720p 這兩種舊筆電螢幕上，字沒變小、可用高度卻少一截，最後兩行會被捲進去看不到。
+   斷點取 820px：1600x900 與 1920x953（忘了按 F11 的最大化視窗）都在這之上，維持原字級。 */
+@media (max-height: 820px) { .popc.wide .prompt { font-size: .68rem } }
+
 .openers { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap }
 .oplabel { font-weight: 700; color: var(--ink2); margin-right: .3rem }
 .opener { border: 0; border-radius: 10px; background: var(--brand); color: #fff;
@@ -480,7 +496,7 @@ button.box:hover { border-color: var(--brand) }
 
   <div class="grid g2">
     <div class="panel ok" data-step="1">
-      <div class="ph">人類同事自然知道</div>
+      <div class="ph">人類同事有經驗，知道</div>
       <ul>
         <li>檔名要「日期活動名文件類型」</li>
         <li>照片跟簽到表要分開放</li>
@@ -489,7 +505,7 @@ button.box:hover { border-color: var(--brand) }
       </ul>
     </div>
     <div class="panel mute" data-step="2">
-      <div class="ph">AI 實際看到的</div>
+      <div class="ph">AI 只看到</div>
       <ul>
         <li>一個資料夾</li>
         <li>「重新命名、分類好」這句話</li>
@@ -503,7 +519,6 @@ button.box:hover { border-color: var(--brand) }
       <li>檔名要什麼格式？</li>
       <li>要分成哪幾類？</li>
       <li>原始檔可以動嗎？</li>
-      <li>「工作地圖」是什麼？</li>
     </ul>
   </div>
 
@@ -662,17 +677,17 @@ button.box:hover { border-color: var(--brand) }
 <div class="inner stack">
   <div>
     <div class="eyebrow">方法</div>
-    <h2>做到一半卡住，<em>這三句最有用</em></h2>
+    <h2>事情往往不順利，<em>該怎麼辦</em></h2>
   </div>
 
   <div class="grid g2">
     <div data-step="1">
-      <h3>怕雙方理解不同</h3>
+      <h3>同樣的錯一直犯</h3>
       <div class="cw"><button class="copy" data-c="q1">複製</button>
-        <div class="prompt" id="q1">請先用自己的話，說明你理解的需求。</div></div>
+        <div class="prompt" id="q1">用你的視角說明，為什麼這邊你會這樣處理。</div></div>
     </div>
     <div data-step="2">
-      <h3>結果很重要</h3>
+      <h3>說有測都是騙人的</h3>
       <div class="cw"><button class="copy" data-c="q2">複製</button>
         <div class="prompt" id="q2">完成後，請按照完成條件逐項檢查，並告訴我檢查結果。</div></div>
     </div>
@@ -842,7 +857,7 @@ button.box:hover { border-color: var(--brand) }
 <div class="inner stack">
   <div>
     <div class="eyebrow">風險</div>
-    <h2>工具能跑，<em>不代表結果能用</em></h2>
+    <h2>常見風險問題</h2>
   </div>
 
   <div class="grid g5">
@@ -865,7 +880,7 @@ button.box:hover { border-color: var(--brand) }
   <div class="pop popc" id="pop-r2">
     <div class="poph"><span>02　做太大：一次要求一整套</span><button class="popx" data-close>關閉</button></div>
     <div class="popbody">
-      <p><span class="lb">實際例子</span>一開始就要求一套完整的客戶管理系統，最後每個功能都只做一半</p>
+      <p><span class="lb">實際例子</span>一開始就要求一套完整系統，但自己對「完整」的樣貌也沒概念，系統就東缺西缺</p>
       <p class="fix"><span class="lb">如何避免</span>先做一個最小、但真的能用的版本 —— 能跑完一次完整流程，比十個做一半的功能有用</p>
     </div>
   </div>
@@ -894,7 +909,7 @@ button.box:hover { border-color: var(--brand) }
     </div>
   </div>
 
-  <div class="punch" data-step="1">AI 負責加快製作，<b>人負責決定什麼能交付</b></div>
+  <div class="punch" data-step="1"><b>人得為 AI 的行為負責</b></div>
 </div>
 </section>
 
@@ -966,17 +981,17 @@ button.box:hover { border-color: var(--brand) }
     <div class="story s2" data-step="2">
       <div class="em">😅</div>
       <div class="gauge"><i style="width:92%"></i></div>
-      <div class="cap"><b>隔壁組又追加六杯</b>紅茶兩杯、綠茶一杯、烏龍拿鐵三杯，糖冰各自不同。<br>中間還有兩個人講完又改口</div>
+      <div class="cap"><b>隔壁組又追加</b>紅茶兩杯、珍奶一杯、烏龍拿鐵三杯，糖冰各自不同<br>加碼<br>小李：我要蛋塔六顆<br>小林：我要 100 元的地瓜球</div>
     </div>
     <div class="story s4" data-step="3">
       <div class="em">😰</div>
       <div class="gauge"><i style="width:40%"></i></div>
-      <div class="cap"><b>記不下了，濃縮成一句</b>「珍奶三杯、紅茶兩杯、綠茶一杯、拿鐵三杯。」<br><b style="display:inline;color:var(--stop)">糖冰不見了，誰點的也不見了</b></div>
+      <div class="cap"><b>記不住了，濃縮一下</b>「珍奶四杯、紅茶兩杯、拿鐵三杯、小李蛋塔、小林地瓜球。」<br><b style="display:inline;color:var(--stop)">糖冰不見了，誰點的也不見了</b></div>
     </div>
     <div class="story s3" data-step="4">
       <div class="em">😵</div>
       <div class="gauge"><i style="width:60%"></i></div>
-      <div class="cap"><b>這時候有人要改</b>小陳：「我那杯珍奶改紅茶。」<br>小王：「我那杯改無糖。」<br><b style="display:inline;color:var(--stop)">小明手上只剩「珍奶三杯」—— 哪一杯是小陳的？小王本來幾分糖？</b></div>
+      <div class="cap"><b>這時候有人要改</b>小陳：「我那杯珍奶改紅茶。」<br>小王：「我那杯改無糖。」<br><b style="display:inline;color:var(--stop)">小明手上只剩「珍奶四杯」—— 哪一杯是小陳的？小王本來幾分糖？</b></div>
     </div>
   </div>
 
@@ -1024,7 +1039,7 @@ button.box:hover { border-color: var(--brand) }
   </table>
 
   <div class="note-inline" data-step="2">
-    <b>它會先自己去查。</b>從檔案裡看得到的它不會問你，只問<b>只有你才知道</b>的事（要不要保留舊格式？出錯時要停下來還是跳過？），而且會附選項
+    <b>它會先自己查檔案資料夾</b>，跟你確認需求，並用選項交流
   </div>
 
   <div class="panel mark" data-step="3">
@@ -1081,6 +1096,103 @@ button.box:hover { border-color: var(--brand) }
 </section>
 
 <!-- ═══════════ P14 ═══════════ -->
+<!-- 前面十三頁教的是「怎麼講」，這頁是「在哪裡講」。
+     位置刻意夾在設定頁和痛點頁中間：台下剛把 Custom Instructions 設好，
+     接著開一場真的讀得到自己檔案的對話，最後才把自己的痛點帶進去試。
+     步驟卡的文案只寫得出使用者當場示範過的那四步，不要替它補菜單名稱 ——
+     UI 改版之後，寫死的選單名會變成台下照著找卻找不到的那一行。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">動手做</div>
+    <h2><em>2 min</em>　開一場讀得到你檔案的對話</h2>
+  </div>
+
+  <div class="grid g4 plain">
+    <div class="box" data-step="1">
+      <span class="t">① 切換到 Codex</span>
+      <span class="s">ChatGPT 畫面<b>左上角</b>切換，從一般對話換成 Codex</span>
+    </div>
+    <div class="box" data-step="2">
+      <span class="t">② 建立新對話</span>
+    </div>
+    <div class="box" data-step="3">
+      <span class="t">③ 選擇專案</span>
+      <span class="s">從清單裡挑一個既有的，<br>或<b>建立一個新專案</b></span>
+    </div>
+    <div class="box" data-step="4">
+      <span class="t">④ 設定來源資料夾</span>
+      <span class="s"><b>沒指到的它讀不到，也動不了</b></span>
+    </div>
+  </div>
+
+  <div class="note-inline" data-step="5">
+    <b>選資料夾就是在畫界線。</b>指到整個桌面，它就有整個桌面可以改；指到單一個專案資料夾，它最多只動得了那一夾裡的東西 —— <b>第一次先指小的那個</b>
+  </div>
+
+  <div class="punch" data-step="6">先把範圍圈好，<b>再開始講你要做什麼</b></div>
+</div>
+</section>
+
+<!-- ═══════════ P15 ═══════════ -->
+<!-- 收方案的那段 prompt 用彈窗、不直接排在頁面上：13 行內容攤在這頁會把金句擠到畫面外，
+     而且 .prompt 的預設 white-space 不保留換行，只有 .popc .prompt 才是 pre-wrap ——
+     直接內嵌會變成擠成一坨的一整段，投影出去看不出是五個項目。
+     複製鈕帶 data-raw="1"：這段有階層縮排，逐行去縮排會把 1-5 那五項的層級壓平。 -->
+<section class="slide" data-dense="mid">
+<div class="inner stack">
+  <div>
+    <div class="eyebrow">動手做</div>
+    <h2>想清楚的地方，<em>不用花在動手的額度上</em></h2>
+    <p class="hint">聊天很便宜，動手很貴 —— 把「想」跟「做」分成兩個地方，同樣的額度可以多跑好幾輪</p>
+  </div>
+
+  <div class="grid g2">
+    <div class="panel ok" data-step="1">
+      <div class="ph">① 想　用網頁版 ChatGPT（自己的帳號）</div>
+      <ul>
+        <li>聊天、討論、比較做法、被它反問</li>
+        <li>來回到<b>你講得出「我要的就是這個」</b>為止</li>
+        <li>這一段一定會反覆，反覆才是對的</li>
+      </ul>
+    </div>
+    <div class="panel mark" data-step="2">
+      <div class="ph">② 做　交給本機的 Codex</div>
+      <ul>
+        <li>把收斂好的那份方案，<b>整段貼進去當第一句</b></li>
+        <li>它不用再陪你想，直接照著做</li>
+        <li>額度留給「製作 → 測試 → 修正」那一圈</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="openers" data-step="3">
+    <span class="oplabel">跨過去之前，先叫它把討論收成一份方案：</span>
+    <button class="opener" data-open="plan">產出方案</button>
+  </div>
+
+  <div class="pop popc" id="plan">
+    <div class="poph"><span>從「想」跨到「做」之前 ｜ 叫它收成一份方案，貼到 Codex 第一句</span><button class="popx" data-close>關閉</button></div>
+    <div class="cw"><button class="copy" data-c="plan-t" data-raw="1">複製</button>
+<div class="prompt" id="plan-t">我們上面討論的東西，請收成一份方案，我要整段貼給另一個 AI 去執行。
+它看不到我們這場對話，只會看到你寫的這一份：
+
+  1. 目標：做完之後我手上會有什麼（一句話）
+  2. 現況：有哪些檔案或資料、放在哪裡、格式長什麼樣
+  3. 步驟：拆成有先後順序的步驟，一步一件事
+  4. 不要做的事：我否決過的做法，連同否決的理由
+  5. 完成條件：每一步我要看到什麼，才算真的做對了
+
+專有名詞第一次出現就解釋一次。
+你不確定的地方標成「待確認」，不要補一個看起來合理的說法。
+只輸出這份方案，不要再問我問題。</div></div>
+  </div>
+
+  <div class="punch" data-step="4">在便宜的地方想清楚，<b>再到貴的地方動手</b></div>
+</div>
+</section>
+
+<!-- ═══════════ P16 ═══════════ -->
 <section class="slide" data-dense="mid">
 <div class="inner stack">
   <div>
@@ -1115,17 +1227,26 @@ button.box:hover { border-color: var(--brand) }
      .slide 未顯示時是 display:none，裡面的 position:fixed 子元素一樣不會被繪製 ——
      放回第 6 頁裡的話，第 13 頁那顆按鈕點下去畫面上什麼都不會出現，而且不會報錯。
      只有一份原文，改的時候不會漏改另一邊。 -->
-  <div class="pop popc" id="ci-en">
+  <div class="pop popc wide" id="ci-en">
     <div class="poph"><span>Custom Instructions ｜ 英文版</span><button class="popx" data-close>關閉</button></div>
     <div class="cw"><button class="copy" data-c="ci-en-t">複製</button>
 <div class="prompt" id="ci-en-t"># Communication
 - Always respond in Traditional Chinese using Taiwan terminology.
 - Answer first, then explain.
 - Be concise, but never omit essential mechanisms or actionable details.
+- Explain each technical term once, the first time it appears.
+
+# Getting started and plans
+- Ask me when information is missing; do not assume.
+- When you ask, give 2-4 numbered options per question, each with a default.
+- Stay inside the scope I asked for; list anything else and ask before doing it.
+- Follow the agreed plan; if you need to deviate, say so first and explain why.
+- When a stage is done, or before this conversation ends, update the plan: done, changed, still open.
 
 # Evidence
 - Support factual claims with a file path and line number, or a URL.
 - Label unsupported conclusions as inference.
+- Say so when you cannot find or verify something; do not invent a plausible answer.
 - Date time-sensitive information.
 
 # Code changes
@@ -1134,26 +1255,36 @@ button.box:hover { border-color: var(--brand) }
 - In Git repositories, preserve existing changes and provide a clear diff.
 
 # Actions requiring confirmation
-- Before writing or deleting memory, overwriting files through connectors, sending messages, or publishing content, describe the exact action and wait.
+- Overwriting or deleting files, changing memory, sending messages, publishing: describe the action and wait.
 
 # Corrections
 - If my premise is wrong, state that first before changing direction.
 
 # Tool reports
-- After running tools, state what ran, whether it succeeded, and what remains.</div></div>
+- After running tools, state what ran, whether it succeeded, and what remains.
+- Do not just report "done" - include the actual output you saw.</div></div>
   </div>
 
-  <div class="pop popc" id="ci-zh">
+  <div class="pop popc wide" id="ci-zh">
     <div class="poph"><span>Custom Instructions ｜ 中文版（講解用）</span><button class="popx" data-close>關閉</button></div>
     <div class="cw"><button class="copy" data-c="ci-zh-t">複製</button>
 <div class="prompt" id="ci-zh-t"># 溝通
 - 一律使用繁體中文與台灣用語回覆
 - 先給答案，再解釋
 - 精簡，但不要省略關鍵機制與可執行的細節
+- 專有名詞第一次出現時，順手用一句話解釋
+
+# 開工與計畫
+- 資訊不足就先問我，不要自己假設
+- 問我問題時，每題給 2–4 個選項，每個選項附一個預設值
+- 只做我要求的範圍；想到其他該改的，先列出來問我
+- 有計畫就照計畫做；要偏離之前先說，並說明原因
+- 一個階段做完、或這場對話要結束之前，把計畫更新成現況：已完成、有變更、還沒做的
 
 # 證據
 - 事實性的主張要附檔案路徑與行號，或附網址
 - 沒有依據的結論要標成推測
+- 查不到或不確定就直說，不要補一個看起來合理的說法
 - 有時效性的資訊要標上日期
 
 # 改程式
@@ -1162,13 +1293,14 @@ button.box:hover { border-color: var(--brand) }
 - 在 Git 專案裡，保留既有的變更，並提供清楚的 diff
 
 # 需要先確認的動作
-- 寫入或刪除記憶、透過連接器覆蓋檔案、送出訊息、發布內容之前，先描述你要做的確切動作，然後等我回覆
+- 覆蓋或刪除檔案、寫入或刪除記憶、送出訊息、發布內容之前，先描述你要做的確切動作，然後等我回覆
 
 # 糾正
 - 如果我的前提是錯的，先講這件事，再改變方向
 
 # 工具回報
-- 跑完工具之後，說明你跑了什麼、有沒有成功、還剩下什麼沒做</div></div>
+- 跑完工具之後，說明你跑了什麼、有沒有成功、還剩下什麼沒做
+- 不要只回報「已完成」，附上你實際看到的輸出</div></div>
   </div>
 
 <!-- ═══════════ 導覽 ═══════════ -->
