@@ -196,6 +196,14 @@ code { font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace;
    td.k 的 white-space:nowrap 會讓長句子撐爆整張表的寬度。 */
 .dt td.who { font-weight: 900; color: var(--brand-ink); line-height: 1.45 }
 .dt .sub { font-size: .86em; opacity: .8 }
+/* 延伸閱讀頁的連結。只定義在 .dt 裡，不定全域 a ——
+   全域樣式會讓以後任何誤加的連結自動上色，看不出哪些是刻意做成可點的。
+   不用底線：投影上底線會跟中文的字腳糊在一起，改用底部細線當可點的提示。
+   overflow-wrap:anywhere 是必要的：repo 名稱是長字串，沒有它會把整欄撐爆
+   而不是折行（實測 x1xhlol/system-prompts-and-models-of-ai-tools 這種長度）。 */
+.dt a { color: var(--brand-ink); font-weight: 900; text-decoration: none;
+        border-bottom: 1px solid var(--accent); overflow-wrap: anywhere }
+.dt a:hover { border-bottom-color: var(--brand) }
 /* 排查頁那張三格表是要一列一列指著唸的，行距太緊台下會對錯列。
    只加在 .roomy —— 其他幾張表（該給誰用、Agent 決策、MCP 決策）是「掃過去看對照」，
    一起加寬會讓那幾頁高到要捲。 */
@@ -1583,46 +1591,56 @@ description: 把會議筆記整理成摘要、決議清單、待辦表格。
 <!-- 這頁不用講，是給想自己往下走的人帶走的。所以資訊密度可以高、字可以小。
      星數一定要標查證日期：數字每個月都在變，沒標日期的話半年後這頁就是錯的，
      而且沒有人會發現。真的要更新就重查一次，不要憑印象改。
-     排序照「非工程職用得上」而不是照星數 —— markitdown 只有第二高但最實用。 -->
+     排序照「非工程職用得上」而不是照星數 —— markitdown 只有第二高但最實用。
+
+     repo 名稱一律做成連結，而且一律 target="_blank"：
+     這是全場唯一有連結的一頁，在簡報中途點下去如果直接導航走，
+     整份投影片的頁碼與分段狀態全部歸零，而且回上一頁也救不回來。
+
+     「拿它做什麼」一律以動作開頭並加粗（「要寫 SKILL.md 時，打開來抄一份改」），
+     不要只寫它是什麼 —— 這頁是給人帶走自己用的，寫成名詞解釋台下不會知道何時該打開。
+
+     repo 名稱裡插 <wbr>：這些名稱是長字串，沒有斷行提示時瀏覽器會把整欄撐爆
+     而不是折行；<wbr> 只提示可斷點，不會在不需要折行時留下任何痕跡。 -->
 <section class="slide" data-dense="high">
 <div class="inner stack">
   <div>
     <div class="eyebrow">帶走</div>
     <h2>想自己往下走，<em>從這幾個開始</em></h2>
-    <p class="hint">GitHub 上找得到，星數為 2026-09-10 查得。排序照「非工程職用得上」，不是照星數</p>
+    <p class="hint"><b>repo 名稱可以點</b>（會另開分頁）。星數為 2026-09-10 查得，排序照「非工程職用得上」，不是照星數</p>
   </div>
 
   <table class="dt" data-step="1">
-    <tr><th style="width:32%">Repo</th><th style="width:10%">★</th><th>拿它做什麼</th></tr>
+    <tr><th style="width:30%">Repo<span class="sub">　點得開</span></th><th style="width:8%">★</th><th>拿它做什麼</th></tr>
     <tr>
-      <td class="who"><code>microsoft/markitdown</code></td>
+      <td class="who"><a href="https://github.com/microsoft/markitdown" target="_blank" rel="noopener">microsoft/<wbr>markitdown</a></td>
       <td>182k</td>
-      <td class="w"><b>最實用。</b>Word／PDF／Excel／PPT 轉成 Markdown —— 把公司現有文件變成 AI 讀得懂的格式</td>
+      <td class="w"><b>文件要給 AI 讀之前，先用它轉一次。</b>Word／PDF／Excel／PPT 轉成 Markdown —— 轉過的比原始檔好讀，它少猜很多</td>
     </tr>
     <tr>
-      <td class="who"><code>anthropics/skills</code></td>
+      <td class="who"><a href="https://github.com/anthropics/skills" target="_blank" rel="noopener">anthropics/<wbr>skills</a></td>
       <td>176k</td>
-      <td class="w">官方的 skill 範例集，<code>SKILL.md</code> 照抄改</td>
+      <td class="w"><b>要寫 SKILL.md 時，打開來抄一份改。</b>官方維護的 skill 集合，格式最標準</td>
     </tr>
     <tr>
-      <td class="who"><code>ComposioHQ/awesome-claude-skills</code></td>
+      <td class="who"><a href="https://github.com/ComposioHQ/awesome-claude-skills" target="_blank" rel="noopener">ComposioHQ/<wbr>awesome-claude-skills</a></td>
       <td>75k</td>
-      <td class="w">130+ 個現成 skill，有行銷與 business 分類</td>
+      <td class="w"><b>自己寫之前，先來這裡找有沒有人做過。</b>130+ 個現成 skill，有行銷與 business 分類</td>
     </tr>
     <tr>
-      <td class="who"><code>punkpeye/awesome-mcp-servers</code></td>
+      <td class="who"><a href="https://github.com/punkpeye/awesome-mcp-servers" target="_blank" rel="noopener">punkpeye/<wbr>awesome-mcp-servers</a></td>
       <td>95k</td>
-      <td class="w">要接外部服務時來這裡找現成的</td>
+      <td class="w"><b>要接 Notion、Slack、資料庫時來這裡找。</b>現成 MCP server 的目錄，不用自己寫</td>
     </tr>
     <tr>
-      <td class="who"><code>x1xhlol/system-prompts-…</code></td>
+      <td class="who"><a href="https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools" target="_blank" rel="noopener">x1xhlol/<wbr>system-prompts-and-models-of-ai-tools</a></td>
       <td>144k</td>
-      <td class="w">各家 AI 工具的系統提示詞原文 —— 看真正在生產環境跑的指令長什麼樣</td>
+      <td class="w"><b>想知道專業的常駐指令長什麼樣，看這個最快。</b>Cursor、Devin 這些工具的系統提示詞原文</td>
     </tr>
     <tr>
-      <td class="who"><code>github/spec-kit</code></td>
+      <td class="who"><a href="https://github.com/github/spec-kit" target="_blank" rel="noopener">github/<wbr>spec-kit</a></td>
       <td>135k</td>
-      <td class="w">第一堂 <code>/plan</code>「先講定再做」的工程化版本，想再往下走的人看</td>
+      <td class="w"><b>想把流程做紮實再看。</b>GitHub 官方的「規格先行」工具包，第一堂 <code>/plan</code> 的工程化版本</td>
     </tr>
   </table>
 </div>
