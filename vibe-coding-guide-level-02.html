@@ -242,9 +242,13 @@ code { font-family: ui-monospace, Consolas, 'Noto Sans TC', monospace;
    是照原字級量出來的（見該頁註解），一起放大會把底下那行字裁掉。
    t-d 停在 22px 是上限：方塊寬 205，「你看得到的」五個字再大就會滿出方塊，
    所以那三格的說明也拆成了兩行。 */
-.flow.big .t-e { font-size: 46px }
-.flow.big .t-t { font-size: 32px }
-.flow.big .t-d { font-size: 22px }
+/* 方塊內的三個字級（emoji／名稱／說明）刻意比外面的箭頭說明收一階：
+   46/32/22 那組實測「太飽滿」—— 字幾乎貼到方塊邊，四個方塊排開像四塊實心色板，
+   看不出哪裡是留白。方塊寬高是寫死的 205x160，所以只能改字。
+   t-a（箭頭上的說明）維持 24px 不動：它在方塊外面，而且是這兩張圖的主線。 */
+.flow.big .t-e { font-size: 38px }
+.flow.big .t-t { font-size: 27px }
+.flow.big .t-d { font-size: 19px }
 .flow.big .t-a { font-size: 24px }
 .flow.big .go, .flow.big .back { stroke-width: 3.5 }
 .flow.big .nd-k { stroke-width: 3.5 }
